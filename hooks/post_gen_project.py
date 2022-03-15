@@ -35,7 +35,8 @@ if __name__ == '__main__':
             for line in fin:
                 lines.append(line.replace('\r\n', '\n'))
         with open(shell_script, "w") as fout:
-            fout.writelines(lines)
+            for line in lines:
+                fout.write(line)
 
     # Make shell scripts executable
     for shell_script in shell_scripts:
