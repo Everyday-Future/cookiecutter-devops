@@ -5,7 +5,6 @@ import subprocess
 import requests
 from config import Version, Config
 
-
 local_server_url = Config.SERVER_URL
 staging_server_url = Config.STAGING_URL
 
@@ -146,13 +145,23 @@ class SubProcessor:
             subprocess.run(f'git push origin v{ver_str}')
 
     @staticmethod
-    def test_all():
+    def test_all(do_build=True):
         # Build and test all
         SubProcessor.docker_down()
         click.clear()
-        SubProcessor.docker_build()
-        subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
-                       'run -e TEST_PARALLEL=True host bash host/test_all.sh')
+        if do_build is True:
+            SubProcessor.docker_build()
+        ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+                             'run host python -m unittest discover -s tests.unit_tests -vvv ')
+        if ret == 0:
+            ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+                                 'run -e TEST_PARALLEL=True host unittest-parallel -s tests.integration_tests -vvv ')
+        if ret == 0:
+            ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+                                 'run -e TEST_PARALLEL=True host unittest-parallel -s tests.acceptance_tests -vvv ')
+        if ret == 0:
+            ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+                                 'run -e TEST_PARALLEL=True host unittest-parallel -s tests.smoke_tests -vvv ')
 
     @staticmethod
     def test_loop(num_loops=10):
@@ -357,8 +366,7 @@ def run_tests(mode):
         sp.test_loop()
     elif mode == '8':
         # Test all without building
-        subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
-                       'run -e TEST_PARALLEL=True host bash host/test_all.sh')
+        sp.test_all(do_build=False)
 
 
 @click.command()
