@@ -19,16 +19,16 @@ if __name__ == '__main__':
         remove_file('LICENSE')
 
     # Create secret envs
-    os.rename(os.path.join('{{ cookiecutter.project_slug }}', 'secret--template.env.txt'),
-              os.path.join('{{ cookiecutter.project_slug }}', 'secret--template.env'))
-    os.rename(os.path.join('{{ cookiecutter.project_slug }}', 'secret--template-values.env.txt'),
-              os.path.join('{{ cookiecutter.project_slug }}', 'secret--template-values.env'))
+    os.rename(os.path.join(PROJECT_DIRECTORY, '{{ cookiecutter.project_slug }}', 'secret--template.env.txt'),
+              os.path.join(PROJECT_DIRECTORY, '{{ cookiecutter.project_slug }}', 'secret--template.env'))
+    os.rename(os.path.join(PROJECT_DIRECTORY, '{{ cookiecutter.project_slug }}', 'secret--template-values.env.txt'),
+              os.path.join(PROJECT_DIRECTORY, '{{ cookiecutter.project_slug }}', 'secret--template-values.env'))
 
     # Convert shell scripts for Windows
-    shell_scripts = [os.path.join('{{ cookiecutter.project_slug }}', '.__run_cli.sh'),
-                     os.path.join('{{ cookiecutter.project_slug }}', 'boot.sh'),
-                     os.path.join('{{ cookiecutter.project_slug }}', 'host', 'test_all.sh'),
-                     os.path.join('{{ cookiecutter.project_slug }}', 'host', 'test_loop.sh')]
+    shell_scripts = [os.path.join(PROJECT_DIRECTORY, '{{ cookiecutter.project_slug }}', '.__run_cli.sh'),
+                     os.path.join(PROJECT_DIRECTORY, '{{ cookiecutter.project_slug }}', 'boot.sh'),
+                     os.path.join(PROJECT_DIRECTORY, '{{ cookiecutter.project_slug }}', 'host', 'test_all.sh'),
+                     os.path.join(PROJECT_DIRECTORY, '{{ cookiecutter.project_slug }}', 'host', 'test_loop.sh')]
     for shell_script in shell_scripts:
         with open(shell_script, "r") as fin:
             lines = []
