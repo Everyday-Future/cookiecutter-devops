@@ -183,8 +183,7 @@ class IntegrationBaseCase(unittest.TestCase):
         self.admin_email = f"admin{self.timestamp}@luminaryhandbook.com"
         self.admin_password = "notinproduction"
         # create test admin user
-        self.admin = User(username=self.admin_username, email=self.admin_email,
-                          sign_up_date=datetime.datetime.utcnow())
+        self.admin = User(email=self.admin_email)
         self.admin.set_password(self.admin_password)
         db.session.add(self.admin)
         db.session.commit()

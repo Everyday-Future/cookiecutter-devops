@@ -26,7 +26,7 @@ class BaseCase(unittest.TestCase):
         self.username = f"test{random.randint(0, 9999999)}"
         self.password = global_config.SECRET_KEY
         rand_email = f"{random.randint(0, 9999999)}@{{cookiecutter.project_slug}}.com"
-        self.user = User(username=self.username, email=rand_email, sign_up_date=datetime.datetime.utcnow())
+        self.user = User(email=rand_email)
         self.user.set_password(self.password)
         db.session.add(self.user)
         db.session.commit()
