@@ -1,6 +1,8 @@
 {
     "_copy_without_render": [
         "*.html",
+        "*.svelte",
+        "*.env.txt",
         "*.py",
         "*/templates/*"
     ],

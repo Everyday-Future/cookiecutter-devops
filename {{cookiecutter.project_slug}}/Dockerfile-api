@@ -53,8 +53,6 @@ COPY babel.cfg .
 COPY etl etl
 COPY tests tests
 COPY config.json .
-COPY README.md .
-COPY history.rst .
 
 
 FROM host as locust

@@ -33,6 +33,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         target_config = sys.argv[1]
     else:
-        target_config = 'docker'
+        target_config = 'api-docker'
     # Build all the .env files from the template and secrets
     build(target_config)
