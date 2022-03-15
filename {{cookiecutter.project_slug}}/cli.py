@@ -153,13 +153,13 @@ class SubProcessor:
             SubProcessor.docker_build()
         ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                              'run host python -m unittest discover -s tests.unit_tests -vvv ')
-        if ret == 0:
+        if ret.returncode == 0:
             ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                                  'run -e TEST_PARALLEL=True host unittest-parallel -s tests.integration_tests -vvv ')
-        if ret == 0:
+        if ret.returncode == 0:
             ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                                  'run -e TEST_PARALLEL=True host unittest-parallel -s tests.acceptance_tests -vvv ')
-        if ret == 0:
+        if ret.returncode == 0:
             ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                                  'run -e TEST_PARALLEL=True host unittest-parallel -s tests.smoke_tests -vvv ')
 
