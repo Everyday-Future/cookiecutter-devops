@@ -1,0 +1,26 @@
+# Multi-stage build for the frontend
+
+FROM mhart/alpine-node:14 AS client-base
+# install dependencies
+WORKDIR /app
+COPY client/package.json client/package-lock.json /app/client/
+# Copy all local files into the image.
+COPY /client/src /app/client/src
+COPY /client/docker.env /app/client/.env
+COPY /client/static /app/client/static
+COPY /client/jsconfig.json /app/client/jsconfig.json
+COPY /client/svelte.config.js /app/client/svelte.config.js
+#COPY /client/svelte.config.js /app/client/svelte.config.cjs
+WORKDIR /app/client
+RUN npm install --only=prod
+#RUN node node_modules/esbuild/install.js
+RUN npm run build
+###
+# Only copy over the Node pieces we need
+###
+FROM mhart/alpine-node:slim-14 AS frontend
+COPY --from=client-base /app /app
+WORKDIR /app/client
+EXPOSE $PORT
+ENV NODE_OPTIONS="--max-old-space-size=1024"
+CMD ["node", "./build"]

@@ -1,0 +1,65 @@
+version: "3.7"
+
+services:
+  # Add the integration secrets to auth with 3rd-party services
+  # Mount temporary volumes for testing
+  api:
+    env_file:
+      - ./local.env
+    environment:
+#       - SERVER_NAME=api:5000
+      - WEBDRIVER_URL=http://chrome:4444/wd/hub
+  chrome:
+    image: selenium/standalone-chrome:3.141.59-yttrium
+    container_name: chrome
+    shm_size: '2gb'
+    networks:
+      - default
+    deploy:
+      replicas: 1
+    ports:
+      - "4444:4444"
+  # Container within which to run the integration tests
+  host:
+    build:
+      context: .
+      dockerfile: Dockerfile-api
+      target: host
+    networks:
+      - default
+    depends_on:
+      - api
+#      - frontend
+      - chrome
+    env_file:
+      - ./local.env
+    environment:
+      - ENV=testing
+      - PORT=5011
+      - HOST=0.0.0.0
+      - USE_HTTPS=False
+      - DEBUG=True
+      - SECRET_KEY=23RT34GQ5GQ34
+      - SALT=43T53434TGWQE
+      - UNSUB_SALT=Q4FQ43FGW535
+      - RECAPTCHA_ENABLED=False
+      - DATABASE_URL=postgresql://postgres:docker@db:5432
+      - SERVER_URL=http://api:5000
+      - CLIENT_SERVER_URL=http://client:3000
+      - WEBDRIVER_URL=http://chrome:4444/wd/hub
+    volumes:
+      - ./api:/srv/api
+      - ./client:/srv/client
+      - ./common:/srv/common
+      - ./etl:/srv/etl
+      - ./tests:/srv/tests
+      - ./data:/srv/data
+      - ./static:/srv/static
+      - ./docs:/srv/docs
+      - ./host:/srv/host
+      - ./migrations:/srv/migrations
+      - ./backend.py:/srv/backend.py
+      - ./config.py:/srv/config.py
+      - ./config.json:/srv/config.json
+    ports:
+      - 5011:5011

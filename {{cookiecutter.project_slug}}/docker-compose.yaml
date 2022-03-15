@@ -1,0 +1,60 @@
+version: "3.7"
+
+services:
+  db:
+    image: postgres:latest
+    networks:
+      - default
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=docker
+  # The flask backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile-api
+      target: api
+    networks:
+      - default
+    depends_on:
+      - db
+    env_file:
+      - ./local.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5000
+      - ENV=testing
+      - DEBUG=True
+      - USE_HTTPS=False
+      - CLIENT_SERVER_URL=http://client:3000
+      - DATABASE_URL=postgresql://postgres:docker@db:5432
+      - SQLALCHEMY_DATABASE_URI=postgresql://postgres:docker@db:5432
+    volumes:
+      - ./api:/srv/api
+      - ./static:/srv/static
+      - ./migrations:/srv/migrations
+      - ./tests:/srv/tests
+      - ./data/test_assets:/srv/data/test_assets
+      - ./data/test_gallery:/srv/data/test_gallery
+      - ./backend.py:/srv/backend.py
+      - ./config.py:/srv/config.py
+      - ./config.json:/srv/config.json
+    ports:
+      - 5000:5000
+#   # The sveltekit web frontend
+#   frontend:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile-frontend
+#       target: frontend
+#     networks:
+#       - default
+#     depends_on:
+#       - db
+#       - api
+#     ports:
+#       - 3000:3000
+#     environment:
+#       - PORT=3000
+#       - NODE_ENV=development

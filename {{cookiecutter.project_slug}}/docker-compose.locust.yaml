@@ -1,0 +1,58 @@
+version: "3.7"
+
+services:
+  master:
+    build:
+      context: .
+      target: locust
+    ports:
+     - "8089:8089"
+    volumes:
+      - ./app:/srv/app
+      - ./common:/srv/common
+      - ./static:/srv/static
+      - ./migrations:/srv/migrations
+      - ./tests:/srv/tests
+      - ./data/test_assets:/srv/data/test_assets
+      - ./data/test_gallery:/srv/data/test_gallery
+      - ./backend.py:/srv/backend.py
+      - ./config.py:/srv/config.py
+      - ./config.json:/srv/config.json
+    environment:
+      - SERVER_URL=
+      - WEBDRIVER_URL=http://chrome:4444/wd/hub
+    command: locust -f /srv/tests/locustfile.py --master -H http://master:8089
+
+  chrome:
+    image: selenium/standalone-chrome:3.141.59-yttrium
+    container_name: chrome
+    shm_size: '2gb'
+    networks:
+      - default
+    deploy:
+      replicas: 1
+    ports:
+      - "4444:4444"
+
+  worker:
+    build:
+      context: .
+      target: locust
+    depends_on:
+      - master
+      - chrome
+    volumes:
+      - ./app:/srv/app
+      - ./common:/srv/common
+      - ./static:/srv/static
+      - ./migrations:/srv/migrations
+      - ./tests:/srv/tests
+      - ./data/test_assets:/srv/data/test_assets
+      - ./data/test_gallery:/srv/data/test_gallery
+      - ./backend.py:/srv/backend.py
+      - ./config.py:/srv/config.py
+      - ./config.json:/srv/config.json
+    environment:
+      - SERVER_URL=h
+      - WEBDRIVER_URL=http://chrome:4444/wd/hub
+    command: locust -f /srv/tests/locustfile.py --worker --master-host master

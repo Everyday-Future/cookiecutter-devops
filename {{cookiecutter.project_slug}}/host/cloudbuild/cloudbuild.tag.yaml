@@ -1,0 +1,361 @@
+
+# Build, tag, and deploy all images / functions
+steps:
+
+  - name: 'bash'
+    id: 'build-start'
+    args: ['echo', 'build started!']
+
+  # Run vulnerability analysis with safety
+  # ------------------------------------
+  - name: python
+    id: 'install-safety'
+    waitFor: [build-start]
+    entrypoint: pip
+    args: ["install", "safety", "--user"]
+  - name: python
+    id: 'safety-check-api'
+    waitFor: [install-safety]
+    entrypoint: python
+    args: ["-m", "safety", "check", "-i", "39642", "-r", "api/requirements.txt", "--full-report"]
+  - name: python
+    id: 'safety-check-etl'
+    waitFor: [install-safety]
+    entrypoint: python
+    args: ["-m", "safety", "check", "-r", "etl/requirements.txt", "--full-report"]
+  - name: 'bash'
+    id: 'safety-passed'
+    args: ['echo', 'python safety - no vulnerabilities found']
+
+#   # Get secrets and model files
+#   # ------------------------------------
+# Integration client secrets
+  - name: gcr.io/cloud-builders/gcloud
+    id: 'client-integration-secrets'
+    waitFor: [build-start]
+    entrypoint: 'bash'
+    args: [ '-c', "gcloud secrets versions access latest --secret=integration_env --format='get(payload.data)' | tr '_-' '/+' | base64 -d > client/docker.env" ]
+# Integration api secrets
+  - name: gcr.io/cloud-builders/gcloud
+    id: 'integration-secrets'
+    waitFor: [build-start]
+    entrypoint: 'bash'
+    args: [ '-c', "gcloud secrets versions access latest --secret=integration_env --format='get(payload.data)' | tr '_-' '/+' | base64 -d > local.env" ]
+
+
+  # Build Docker-Compose environment
+  # ------------------------------------
+  # Docker-compose selenium standalone chrome env for running integration tests here.
+  - name: 'gcr.io/$PROJECT_ID/docker-compose'
+    id: 'build-docker'
+    waitFor: [integration-secrets, client-integration-secrets]
+    args: [
+        '-f', 'docker-compose.yaml',
+        '-f', 'docker-compose.integration.yaml',
+        '--env-file', 'local.env',
+        'build', '--parallel'
+    ]
+    env:
+      - 'PROJECT_ID=$PROJECT_ID'
+
+  # Build and run unit tests
+  # ------------------------------------
+  # unit-test-api
+  - name: 'gcr.io/$PROJECT_ID/docker-compose'
+    id: 'unit-test-api'
+    waitFor: [build-docker]
+    args: [
+        '-f', 'docker-compose.yaml',
+        '-f', 'docker-compose.integration.yaml',
+      'run', '--rm',
+      'host',
+      'python', '-m', 'unittest', 'discover', '-s', 'tests.unit_tests'
+    ]
+    env:
+      - 'PROJECT_ID=$PROJECT_ID'
+  # unit-tests-passed
+  - name: 'bash'
+    id: 'unit-tests-passed'
+    args: ['echo', 'unit_tests - all tests passing!']
+
+  # Take containers down after unit_tests
+  # ------------------------------------
+  - name: 'gcr.io/$PROJECT_ID/docker-compose'
+    id: 'docker-down'
+    waitFor: [unit-test-api]
+    args: [
+        '-f', 'docker-compose.yaml',
+        '-f', 'docker-compose.integration.yaml',
+        'down',
+    ]
+    env:
+      - 'PROJECT_ID=$PROJECT_ID'
+
+  # Build and run integration tests
+  # ------------------------------------
+  # Docker-compose selenium standalone chrome env for running integration tests here.
+  - name: 'gcr.io/$PROJECT_ID/docker-compose'
+    id: 'integration-tests'
+    waitFor: [docker-down]
+    args: [
+        '-f', 'docker-compose.yaml',
+        '-f', 'docker-compose.integration.yaml',
+        '--env-file', 'local.env',
+        'run',
+        '-e', 'TEST_PARALLEL=True',
+        'host',
+        'unittest-parallel', '-s', 'tests/integration_tests', '-vvv'
+    ]
+    env:
+      - 'PROJECT_ID=$PROJECT_ID'
+  - name: 'bash'
+    id: 'integration-tests-passed'
+    args: ['echo', 'integration_tests - all tests passing!']
+
+#   # Pull caches and build all images
+#   # ------------------------------------
+
+# API build
+  - name: 'gcr.io/$PROJECT_ID/docker-compose'
+    id: 'build-api'
+    waitFor: [build-docker]
+    entrypoint: ./host/build.sh
+    args: ["api", "$PROJECT_ID", "$TAG_NAME", "api"]
+# Client integration build
+  - name: gcr.io/cloud-builders/gcloud
+    id: 'staging-client-secrets'
+    waitFor: [integration-tests-passed]
+    entrypoint: 'bash'
+    args: [ '-c', "gcloud secrets versions access latest --secret=${_CLIENT_STAGING_SECRET} --format='get(payload.data)' | tr '_-' '/+' | base64 -d > client/docker.env" ]
+  - name: 'gcr.io/$PROJECT_ID/docker-compose'
+    id: 'build-client'
+    waitFor: [staging-client-secrets]
+    entrypoint: ./host/build.sh
+    args: ["client", "$PROJECT_ID", "$TAG_NAME", "client"]
+# # Storybook
+#   - name: 'gcr.io/$PROJECT_ID/docker-compose'
+#     id: 'build-storybook'
+#     waitFor: [build-docker]
+#     entrypoint: ./host/build.sh
+#     args: ["storybook", "$PROJECT_ID", "$TAG_NAME", "storybook"]
+# # Host
+#   - name: 'gcr.io/$PROJECT_ID/docker-compose'
+#     id: 'build-host'
+#     waitFor: [build-docker]
+#     entrypoint: ./host/build.sh
+#     args: ["host", "$PROJECT_ID", "$TAG_NAME", "api"]
+# # ETL
+#   - name: 'gcr.io/$PROJECT_ID/docker-compose'
+#     id: 'build-etl'
+#     waitFor: [build-docker]
+#     entrypoint: ./host/build.sh
+#     args: ["etl", "$PROJECT_ID", "$TAG_NAME", "etl"]
+
+
+  # Tag and push staging images
+  # ------------------------------------
+# API
+  - name: gcr.io/cloud-builders/docker
+    id: 'api-staging-push'
+    waitFor: [build-api]
+    entrypoint: ./host/push_tag.sh
+    args: ["api", "staging", "$PROJECT_ID", "$TAG_NAME"]
+# Client
+  - name: gcr.io/cloud-builders/docker
+    id: 'client-staging-push'
+    waitFor: [build-client]
+    entrypoint: ./host/push_tag.sh
+    args: ["client", "staging", "$PROJECT_ID", "$TAG_NAME"]
+# # Storybook
+#   - name: gcr.io/cloud-builders/docker
+#     id: 'storybook-staging-push'
+#     waitFor: [build-storybook]
+#     entrypoint: ./host/push_tag.sh
+#     args: ["storybook", "staging", "$PROJECT_ID", "$TAG_NAME"]
+# # Host
+#   - name: gcr.io/cloud-builders/docker
+#     id: 'host-staging-push'
+#     waitFor: [build-host]
+#     entrypoint: ./host/push_tag.sh
+#     args: ["host", "staging", "$PROJECT_ID", "$TAG_NAME"]
+# # ETL
+#   - name: gcr.io/cloud-builders/docker
+#     id: 'etl-staging-push'
+#     waitFor: [integration-tests-passed]
+#     entrypoint: ./host/push_tag.sh
+#     args: ["etl", "staging", "$PROJECT_ID", "$TAG_NAME"]
+
+
+  # Deploy to Cloud Run staging
+  # ------------------------------------
+  # api
+  - name: gcr.io/cloud-builders/gcloud
+    id: 'api-staging-deploy'
+    waitFor: [api-staging-push]
+    entrypoint: ./host/deploy_api_run.sh
+    args: ["api", "staging", "$PROJECT_ID", "staging"]
+  # client
+  - name: gcr.io/cloud-builders/gcloud
+    id: 'client-staging-deploy'
+    waitFor: [client-staging-push]
+    entrypoint: ./host/deploy_client_run.sh
+    args: ["client", "staging", "$PROJECT_ID", "staging"]
+#   # storybook
+#   - name: gcr.io/cloud-builders/gcloud
+#     id: 'storybook-staging-deploy'
+#     waitFor: [storybook-staging-push]
+#     entrypoint: ./host/deploy_client_run.sh
+#     args: ["storybook", "staging", "$PROJECT_ID", "staging"]
+
+
+#   # Deploy to Cloud Functions staging
+#   # ------------------------------------
+# # Data Lake
+#   - name: gcr.io/cloud-builders/gcloud
+#     id: 'etl-lake-staging-deploy'
+#     waitFor: [integration-tests-passed]
+#     entrypoint: ./host/deploy_function.sh
+#     args: ["etl-lake", "staging", "push_to_lake"]
+# # Data Warehouse
+#   - name: gcr.io/cloud-builders/gcloud
+#     id: 'etl-warehouse-staging-deploy'
+#     waitFor: [integration-tests-passed]
+#     entrypoint: ./host/deploy_function.sh
+#     args: ["etl-warehouse", "staging", "push_to_warehouse"]
+# # Renders for printer queue
+#   - name: gcr.io/cloud-builders/gcloud
+#     id: 'renderer-staging-deploy'
+#     waitFor: [integration-tests-passed]
+#     entrypoint: ./host/deploy_function.sh
+#     args: ["renderer", "staging", "get_new_renders"]
+
+
+  # Run Acceptance tests against staging
+  # -------------------------------------------
+  - name: 'gcr.io/$PROJECT_ID/docker-compose'
+    id: 'acceptance-tests'
+    args: [
+        '-f', 'docker-compose.yaml',
+        '-f', 'docker-compose.integration.yaml',
+        'run',
+        '-e', 'SERVER_URL=${_SERVER_STAGING_URL}',
+        '-e', 'CLIENT_URL=${_CLIENT_STAGING_URL}',
+#         '-e', 'ETL_URL=${_ETL_STAGING_URL}',
+        '-e', 'TEST_PARALLEL=True',
+        'host',
+        'unittest-parallel', '-s', 'tests/acceptance_tests', '-vvv'
+    ]
+    env:
+      - 'PROJECT_ID=$PROJECT_ID'
+  - name: 'bash'
+    id: 'acceptance-tests-passed'
+    args: ['echo', 'acceptance_tests - all tests passing!']
+
+
+  # Deploy to Cloud Run prod
+  # ------------------------------------
+# Client prod secret
+  - name: gcr.io/cloud-builders/gcloud
+    id: 'prod-client-secrets'
+    waitFor: [acceptance-tests-passed]
+    entrypoint: 'bash'
+    args: [ '-c', "gcloud secrets versions access latest --secret=${_CLIENT_PROD_SECRET} --format='get(payload.data)' | tr '_-' '/+' | base64 -d > client/docker.env" ]
+# Client prod build
+  - name: 'gcr.io/$PROJECT_ID/docker-compose'
+    id: 'build-prod-client'
+    waitFor: [prod-client-secrets]
+    entrypoint: ./host/build.sh
+    args: ["client", "$PROJECT_ID", "$TAG_NAME", "client"]
+# Client prod push
+  - name: gcr.io/cloud-builders/docker
+    id: 'client-prod-push'
+    waitFor: [build-prod-client]
+    entrypoint: ./host/push_tag.sh
+    args: ["client", "prod", "$PROJECT_ID", "$TAG_NAME"]
+# Client prod deploy
+  - name: gcr.io/cloud-builders/gcloud
+    id: 'client-prod-deploy'
+    waitFor: [client-prod-push]
+    entrypoint: ./host/deploy_client_run.sh
+    args: ["client", "prod", "$PROJECT_ID", "$TAG_NAME"]
+# # ETL
+#   - name: gcr.io/cloud-builders/docker
+#     id: 'etl-prod-push'
+#     waitFor: [acceptance-tests-passed]
+#     entrypoint: ./host/push_tag.sh
+#     args: ["etl", "prod", "$PROJECT_ID", "$TAG_NAME"]
+# # ETL
+#   - name: gcr.io/cloud-builders/gcloud
+#     id: 'etl-prod-deploy'
+#     waitFor: [acceptance-tests-passed]
+#     entrypoint: ./host/deploy_api_run.sh
+#     args: ["etl", "prod", "$PROJECT_ID", "$TAG_NAME"]
+# API
+  - name: gcr.io/cloud-builders/docker
+    id: 'api-prod-push'
+    waitFor: [acceptance-tests-passed]
+    entrypoint: ./host/push_tag.sh
+    args: ["api", "prod", "$PROJECT_ID", "$TAG_NAME"]
+  - name: gcr.io/cloud-builders/gcloud
+    id: 'api-prod-deploy'
+    waitFor: [acceptance-tests-passed]
+    entrypoint: ./host/deploy_api_run.sh
+    args: ["api", "prod", "$PROJECT_ID", "$TAG_NAME"]
+
+
+#   # Monitor the build with Slack
+#   # ------------------------------------
+#   - name: 'gcr.io/$PROJECT_ID/slackbot'
+#     id: 'slackbot-start'
+#     args: [ '--build', '$BUILD_ID',
+#             '--webhook', '$_SLACK_WEBHOOK', '--copy-timeout' ]
+
+
+  # Run Smoke tests against prod
+  # -------------------------------------------
+  - name: 'gcr.io/$PROJECT_ID/docker-compose'
+    id: 'smoke-tests'
+    waitFor: [api-prod-deploy, client-prod-deploy]
+    args: [
+        '-f', 'docker-compose.yaml',
+        '-f', 'docker-compose.integration.yaml',
+        'run',
+        '-e', 'SERVER_URL=${_SERVER_PROD_URL}',
+        '-e', 'CLIENT_URL=${_CLIENT_PROD_URL}',
+        '-e', 'TEST_PARALLEL=True',
+        'host',
+        'unittest-parallel', '-s', 'tests/smoke_tests', '-vvv'
+    ]
+    env:
+      - 'PROJECT_ID=$PROJECT_ID'
+  - name: 'bash'
+    id: 'smoke-tests-passed'
+    args: ['echo', 'smoke_tests - all tests passing!']
+
+
+#   # Deploy to Cloud Functions prod
+#   # ------------------------------------
+# # Data Lake
+#   - name: gcr.io/cloud-builders/gcloud
+#     id: 'etl-lake-prod-deploy'
+#     waitFor: [acceptance-tests-passed]
+#     entrypoint: ./host/deploy_function.sh
+#     args: ["etl-lake", "prod", "push_to_lake"]
+# # Data Warehouse
+#   - name: gcr.io/cloud-builders/gcloud
+#     id: 'etl-warehouse-prod-deploy'
+#     waitFor: [acceptance-tests-passed]
+#     entrypoint: ./host/deploy_function.sh
+#     args: ["etl-warehouse", "prod", "push_to_warehouse"]
+# # Renders for printer queue
+#   - name: gcr.io/cloud-builders/gcloud
+#     id: 'renderer-prod-deploy'
+#     waitFor: [acceptance-tests-passed]
+#     entrypoint: ./host/deploy_function.sh
+#     args: ["renderer", "prod", "get_new_renders"]
+
+#
+# options:
+#   machineType: 'N1_HIGHCPU_8'
+
+timeout: 3800s

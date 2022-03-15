@@ -1,0 +1,14 @@
+Sphinx==4.1.2
+selenium==3.141.0
+locust==1.6.0
+safety==1.10.3
+unittest-parallel==1.4.1
+retry==0.9.2
+Click~=8.0.3
+pytest==6.2.4
+google-cloud-secret-manager==2.7.0
+python-dotenv~=0.19.1
+python-json-logger==2.0.2
+retry==0.9.2
+scour==0.38.2
+selenium==3.141.0

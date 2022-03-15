@@ -1,0 +1,61 @@
+# Multi-stage build for all Luminary Handbook images
+
+# base - os and basic requirements
+FROM python:3.9.7-slim-buster as base
+# Apply global configs
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV SERVER_MODE base
+WORKDIR /srv
+
+
+# api - flask backend api
+FROM base AS api
+# Get api requirements
+COPY api/requirements.txt .
+RUN apt update && \
+    apt install -y iputils-ping poppler-utils && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:inkscape.dev/stable \
+    && apt-get install -y inkscape
+RUN pip install --upgrade pip && pip install -r requirements.txt
+# Get api files
+COPY api api
+COPY static static
+COPY migrations migrations
+COPY config.py .
+COPY config.json .
+COPY babel.cfg .
+COPY backend.py .
+COPY boot.sh .
+ENV FLASK_APP backend.py
+ENV SERVER_MODE api
+EXPOSE $PORT
+CMD ["sh", "boot.sh"]
+
+
+# host - use for globally-scoped processes like testing
+FROM api AS host
+# Get the rest of the requirements
+COPY api/requirements.txt api_requirements.txt
+COPY host/requirements.txt host_requirements.txt
+#COPY etl/requirements.txt etl_requirements.txt
+RUN pip install --upgrade pip && \
+pip install -r api_requirements.txt && \
+#pip install -r etl_requirements.txt && \
+pip install -r host_requirements.txt
+ENV FLASK_APP backend.py
+ENV SERVER_MODE host
+# Get the rest of the files
+COPY api api
+COPY static static
+COPY babel.cfg .
+COPY etl etl
+COPY tests tests
+COPY config.json .
+COPY README.md .
+COPY history.rst .
+
+
+FROM host as locust
+ENV SERVER_MODE locust
