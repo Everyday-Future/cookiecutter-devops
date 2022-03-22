@@ -23,6 +23,10 @@ if __name__ == '__main__':
               os.path.join(PROJECT_DIRECTORY, 'secret--template.env'))
     os.rename(os.path.join(PROJECT_DIRECTORY, 'secret--template-values.env.txt'),
               os.path.join(PROJECT_DIRECTORY, 'secret--template-values.env'))
+    os.rename(os.path.join(PROJECT_DIRECTORY, 'frontend', '.env.txt'),
+              os.path.join(PROJECT_DIRECTORY, 'frontend', '.env'))
+    os.rename(os.path.join(PROJECT_DIRECTORY, 'frontend', 'docker.env.txt'),
+              os.path.join(PROJECT_DIRECTORY, 'frontend', 'docker.env'))
 
     # Convert shell scripts for Windows
     shell_scripts = [os.path.join(PROJECT_DIRECTORY, '.__run_cli.sh'),
