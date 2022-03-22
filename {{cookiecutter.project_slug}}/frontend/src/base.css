@@ -1,0 +1,210 @@
+:root {
+	/* COLORS */
+	--white: #ffffff;
+	--red: #FF0000;
+}
+
+.text-center {
+	text-align: center;
+}
+
+.u {
+	text-decoration: underline !important;
+}
+
+.strike {
+	text-decoration: line-through;
+	text-decoration-color: var(--red);
+}
+
+/* make text not selectable to prevent Components glitches */
+.unselectable {
+	/* For Opera and <= IE9, we need to add unselectable="on" attribute onto each element */
+	-moz-user-select: none; /* These user-select properties are inheritable, used to prevent text selection */
+	-webkit-user-select: none;
+	-ms-user-select: none; /* From IE10 only */
+	user-select: none; /* Not valid CSS yet, as of July 2012 */
+	-webkit-user-drag: none; /* Prevents dragging of images/divs etc */
+}
+
+/*
+=======================
+COMPONENTS
+=======================
+ */
+
+.paper {
+	background-color: var(--white);
+	background-clip: border-box;
+	border: none;
+	box-shadow: 0 8px 15px 4px rgba(0, 0, 0, 0.2);
+	border-radius: 10px;
+	transition: 0.4s;
+}
+
+/*
+=======================
+ANIMATION
+=======================
+ */
+
+/* remove animation if user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+	* {
+		animation-duration: 0s !important;
+	}
+}
+
+/*
+=======================
+RESPONSIVENESS
+=======================
+ */
+
+/*
+-----------------------
+Mobile portrait
+-----------------------
+*/
+.sm-inline-block {
+	display: inline-block !important;
+}
+
+.sm-grid {
+	display: grid !important;
+}
+
+.sm-flex {
+	display: flex !important;
+}
+
+.sm-none {
+	display: none !important;
+}
+
+.lg-only {
+	display: none;
+}
+
+.sm-only {
+	display: inline-block !important;
+}
+
+.container {
+	padding: 0 15px;
+}
+
+.container-fluid {
+	padding: 0;
+	margin: 0;
+}
+
+.flex-center-col {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+
+.flex-center-row {
+	position: relative;
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+}
+
+.transition-quick {
+	-webkit-transition: 300ms ease-out;
+	-moz-transition: 300ms ease-out;
+	-o-transition: 300ms ease-out;
+	transition: 300ms ease-out;
+}
+
+.transition-slow {
+	-webkit-transition: 1s ease-in-out;
+	-moz-transition: 1s ease-in-out;
+	-o-transition: 1s ease-in-out;
+	transition: 1s ease-in-out;
+}
+
+/*
+-----------------------
+Mobile landscape
+-----------------------
+*/
+@media only screen and (orientation: landscape) and (max-width: 850px) {
+	.lg-inline-block {
+		display: inline-block !important;
+	}
+
+	.lg-grid {
+		display: grid !important;
+	}
+
+	.lg-flex {
+		display: flex !important;
+	}
+
+	.lg-none {
+		display: none !important;
+	}
+
+	.lg-only {
+		display: inline-block !important;
+	}
+
+	.sm-only {
+		display: none !important;
+	}
+}
+
+/*
+-----------------------
+Tablet portrait
+-----------------------
+*/
+
+/*
+-----------------------
+Tablet and Desktop landscape
+-----------------------
+*/
+@media only screen and (orientation: landscape) and (min-width: 850px) {
+	.container {
+		padding: 0 15px;
+		max-width: 1150px;
+		margin: 0 auto;
+	}
+
+	.lg-inline-block {
+		display: inline-block !important;
+	}
+
+	.lg-grid {
+		display: grid !important;
+	}
+
+	.lg-flex {
+		display: flex !important;
+	}
+
+	.lg-only {
+		display: inline-block !important;
+	}
+
+	.sm-only {
+		display: none !important;
+	}
+
+	.sharpie-heading {
+		font-size: 28px;
+		line-height: 33px;
+	}
+
+	.block-heading {
+		font-size: 33px;
+		line-height: 38px;
+	}
+}

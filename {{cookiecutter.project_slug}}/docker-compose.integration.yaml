@@ -7,7 +7,6 @@ services:
     env_file:
       - ./local.env
     environment:
-#       - SERVER_NAME=api:5000
       - WEBDRIVER_URL=http://chrome:4444/wd/hub
   chrome:
     image: selenium/standalone-chrome:3.141.59-yttrium
@@ -29,7 +28,7 @@ services:
       - default
     depends_on:
       - api
-#      - frontend
+      - frontend
       - chrome
     env_file:
       - ./local.env
