@@ -6,7 +6,7 @@ WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json /app/frontend/
 # Copy all local files into the image.
 COPY /frontend/src /app/frontend/src
-COPY /frontend/docker.env /app/frontend/.env
+COPY /frontend/.env /app/frontend/.env
 COPY /frontend/static /app/frontend/static
 COPY /frontend/jsconfig.json /app/frontend/jsconfig.json
 COPY /frontend/svelte.config.js /app/frontend/svelte.config.js
