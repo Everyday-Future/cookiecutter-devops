@@ -174,11 +174,11 @@ class SubProcessor:
 
     @staticmethod
     def env_local():
-        subprocess.run('python secret_builder.py api-local')
+        subprocess.run('python secret_builder.py local')
 
     @staticmethod
     def env_docker():
-        subprocess.run('python secret_builder.py api-docker')
+        subprocess.run('python secret_builder.py docker')
 
 
 @click.command()
