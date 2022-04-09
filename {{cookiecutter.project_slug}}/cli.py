@@ -16,19 +16,19 @@ class SubProcessor:
 
     @staticmethod
     def docker_down():
-        subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml down --remove-orphans')
+        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml down --remove-orphans')
 
     @staticmethod
     def upgrade_db():
-        subprocess.run('docker-compose run -e FLASK_DEBUG=1 -p 5008:5008 api flask db upgrade')
+        subprocess.call('docker-compose run -e FLASK_DEBUG=1 -p 5008:5008 api flask db upgrade')
 
     @staticmethod
     def docker_up():
-        subprocess.run('docker-compose up')
+        subprocess.call('docker-compose up')
 
     @staticmethod
     def docker_up_integration():
-        subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml up')
+        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml up')
 
     @classmethod
     def docker_build(cls, force_rm=False):
@@ -36,14 +36,14 @@ class SubProcessor:
         force_rm_str = ""
         if force_rm is True:
             force_rm_str = '--force-rm'
-        subprocess.run(f'docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+        subprocess.call(f'docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                        f'build --parallel {force_rm_str}')
 
     @classmethod
     def debug_up(cls):
         cls.docker_down()
         cls.upgrade_db()
-        subprocess.run('docker-compose -f docker-compose.yaml '
+        subprocess.call('docker-compose -f docker-compose.yaml '
                        'run -e FLASK_DEBUG=1 -e SERVER_NAME=localhost:5000 -e CLIENT_HOST=localhost '
                        '-e CLIENT_PORT=5005 -e USE_HTTPS=False -p 5000:5000 '
                        'api flask run --host=0.0.0.0 --port=5000')
@@ -52,7 +52,7 @@ class SubProcessor:
     def debug_mobile_up(cls):
         cls.docker_down()
         cls.upgrade_db()
-        subprocess.run('docker-compose -f docker-compose.yaml '
+        subprocess.call('docker-compose -f docker-compose.yaml '
                        'run -e FLASK_DEBUG=1 -e SERVER_NAME=192.168.1.7:5008 '
                        '-e CLIENT_SERVER_NAME=192.168.1.7:5005 -e PORT=5008 -e USE_HTTPS=False -p 5008:5008 '
                        'api flask run --host=0.0.0.0 --port=5008')
@@ -62,18 +62,18 @@ class SubProcessor:
         cls.docker_down()
         cls.upgrade_db()
         if do_build is True:
-            subprocess.run(f'docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml '
+            subprocess.call(f'docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml '
                            f'build --force-rm --parallel ')
-        subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up')
+        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up')
 
     @classmethod
     def storybook_up(cls, do_build=False):
         cls.docker_down()
         cls.upgrade_db()
         if do_build is True:
-            subprocess.run(f'docker-compose -f docker-compose.yaml -f docker-compose.storybook.yaml '
+            subprocess.call(f'docker-compose -f docker-compose.yaml -f docker-compose.storybook.yaml '
                            f'build --force-rm --parallel ')
-        subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.storybook.yaml up')
+        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.storybook.yaml up')
 
     @staticmethod
     def wait_for_server_up(target_url, max_timeout=300):
@@ -119,8 +119,8 @@ class SubProcessor:
         bump the version number and tag in git with it
         :param message: The message to add to the commit
         """
-        subprocess.run(f'git add .')
-        subprocess.run(f'git commit -m "{message}"')
+        subprocess.call(f'git add .')
+        subprocess.call(f'git commit -m "{message}"')
 
     @staticmethod
     def git_bump(how, message, do_commit=True, do_push=True):
@@ -139,10 +139,10 @@ class SubProcessor:
         # commit if specified
         if do_commit is True:
             SubProcessor.git_commit(message=message)
-        subprocess.run(f'git tag -a v{ver_str} -m "{message}"')
+        subprocess.call(f'git tag -a v{ver_str} -m "{message}"')
         # push if specified
         if do_push is True:
-            subprocess.run(f'git push origin v{ver_str}')
+            subprocess.call(f'git push origin v{ver_str}')
 
     @staticmethod
     def test_all(do_build=True):
@@ -151,16 +151,16 @@ class SubProcessor:
         click.clear()
         if do_build is True:
             SubProcessor.docker_build()
-        ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+        ret = subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                              'run host python -m unittest discover -s tests.unit_tests -vvv ')
         if ret.returncode == 0:
-            ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+            ret = subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                                  'run -e TEST_PARALLEL=True host unittest-parallel -s tests.integration_tests -vvv ')
         if ret.returncode == 0:
-            ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+            ret = subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                                  'run -e TEST_PARALLEL=True host unittest-parallel -s tests.acceptance_tests -vvv ')
         if ret.returncode == 0:
-            ret = subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+            ret = subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                                  'run -e TEST_PARALLEL=True host unittest-parallel -s tests.smoke_tests -vvv ')
 
     @staticmethod
@@ -169,16 +169,16 @@ class SubProcessor:
         SubProcessor.docker_down()
         click.clear()
         SubProcessor.docker_build()
-        subprocess.run(f'docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+        subprocess.call(f'docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                        f'run -e TEST_PARALLEL=True host bash host/test_loop.sh {num_loops}')
 
     @staticmethod
     def env_local():
-        subprocess.run('python secret_builder.py local')
+        subprocess.call('python secret_builder.py local')
 
     @staticmethod
     def env_docker():
-        subprocess.run('python secret_builder.py docker')
+        subprocess.call('python secret_builder.py docker')
 
 
 @click.command()
@@ -243,8 +243,8 @@ def run_server(mode):
         sp.debug_svelte(do_build=True)
     elif mode == 'n':
         # Notebook Server
-        subprocess.run(f'docker build -f eda/Dockerfile --rm -t notebooks .')
-        subprocess.run(f'docker run -h notebook -it -e GRANT_SUDO=yes --user root -p 8888:8888 --rm '
+        subprocess.call(f'docker build -f eda/Dockerfile --rm -t notebooks .')
+        subprocess.call(f'docker run -h notebook -it -e GRANT_SUDO=yes --user root -p 8888:8888 --rm '
                        f'--mount type=bind,source={os.getcwd()}/data,target=/home/jovyan/data '
                        f'--mount type=bind,source={os.getcwd()}/eda/notebooks,target=/home/jovyan/notebooks '
                        f'--mount type=bind,source={os.getcwd()}/eda/models,target=/home/jovyan/models '
@@ -253,7 +253,7 @@ def run_server(mode):
     elif mode == 'c':
         # Clean and rebuild all
         sp.docker_down()
-        subprocess.run('docker system prune -a --force')
+        subprocess.call('docker system prune -a --force')
         sp.docker_build(force_rm=True)
         sp.upgrade_db()
     elif mode == 'x':
@@ -270,10 +270,10 @@ Please enter the commit message for this new migration
 def new_migration(msg):
     sp = SubProcessor()
     sp.docker_down()
-    subprocess.run(f'docker build -f Dockerfile --target api --rm -t api:latest .')
+    subprocess.call(f'docker build -f Dockerfile --target api --rm -t api:latest .')
     sp.upgrade_db()
     print('\n\nmigration 1')
-    subprocess.run(f'docker-compose run api flask db migrate -m "{msg}"')
+    subprocess.call(f'docker-compose run api flask db migrate -m "{msg}"')
 
 
 @click.command()
@@ -290,7 +290,7 @@ def run_migrations(mode):
     if mode == 'u':
         # Upgrade DB
         # sp.docker_down()
-        subprocess.run(f'docker run api flask db upgrade')
+        subprocess.call(f'docker run api flask db upgrade')
     elif mode == 'n':
         # New migration
         # sp.docker_down()
@@ -298,7 +298,7 @@ def run_migrations(mode):
     elif mode == 'd':
         # Downgrade DB
         # sp.docker_down()
-        subprocess.run(f'docker run api flask db downgrade')
+        subprocess.call(f'docker run api flask db downgrade')
 
 
 @click.command()
@@ -329,19 +329,19 @@ def run_tests(mode):
         # Unit Tests
         sp.docker_down()
         sp.docker_build()
-        subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                        'run host python -m unittest discover -s tests.unit_tests -vvv ')
     elif mode == '2':
         # Integration Tests
         sp.docker_down()
         sp.docker_build()
-        subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                        'run -e TEST_PARALLEL=True host unittest-parallel -s tests.integration_tests -vvv ')
     elif mode == '3':
         # Local Acceptance Tests
         sp.docker_down()
         sp.docker_build()
-        subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                        'run -e TEST_PARALLEL=True host unittest-parallel -s tests.acceptance_tests -vvv ')
     elif mode == '4':
         # Remote Acceptance Tests
@@ -349,18 +349,18 @@ def run_tests(mode):
         sp.upgrade_db()
         ver = Version()
         sp.wait_for_version_number(target_url=staging_server_url, target_version=ver.version)
-        subprocess.run(f'docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml run '
+        subprocess.call(f'docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml run '
                        f'-e SERVER_URL={staging_server_url} '
                        f'host python -m unittest tests.acceptance_tests')
     elif mode == '5':
         # Safety - requirements vulnerability analysis
-        subprocess.run(f'pip install safety --user')
-        subprocess.run(f'python -m safety check -r api/requirements.txt --full-report')
-        subprocess.run(f'python -m safety check -r notebooks/requirements.txt --full-report')
+        subprocess.call(f'pip install safety --user')
+        subprocess.call(f'python -m safety check -r api/requirements.txt --full-report')
+        subprocess.call(f'python -m safety check -r notebooks/requirements.txt --full-report')
     elif mode == '6':
         # Locust - load testing vs staging with a web ui
         sp.docker_down()
-        subprocess.run('docker-compose -f docker-compose.locust.yaml up --scale worker=4')
+        subprocess.call('docker-compose -f docker-compose.locust.yaml up --scale worker=4')
     elif mode == '7':
         # Stress testing - repeat the tests in order to make them more resilient
         sp.test_loop()
@@ -433,17 +433,17 @@ def run_docs(mode):
     if mode == '0':
         # compile and build docs
         docs_folder = os.path.join(Config.PROJECT_DIR, 'docs')
-        subprocess.run(f'sphinx-apidoc -o {docs_folder}/source .')
-        subprocess.run(f'docs_make.bat html')
+        subprocess.call(f'sphinx-apidoc -o {docs_folder}/source .')
+        subprocess.call(f'docs_make.bat html')
     elif mode == '1':
         # compile docs
-        subprocess.run('sphinx-apidoc -o docs/source ../..')
+        subprocess.call('sphinx-apidoc -o docs/source ../..')
     elif mode == '2':
         # build docs
-        subprocess.run('docs/make.bat html')
+        subprocess.call('docs/make.bat html')
     elif mode == '3':
         # view docs
-        subprocess.run('docs/make.bat html')
+        subprocess.call('docs/make.bat html')
         os.chdir(wd)
         from selenium import webdriver
         driver = webdriver.Chrome()
@@ -509,14 +509,14 @@ def main(program):
     elif program == '1':
         sp.docker_down()
         sp.upgrade_db()
-        subprocess.run('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
                        'run -e DEBUG=False -e DOWNLOADER_UID=compressor -e DOWNLOADER_UID=compressor '
                        '-e ORDERS_DIR=\\\\NAS\\home\\Drive\\Organizer\\LuminaryHandbook\\Operations\\Orders '
                        '-p 5005:5005 host python -m tests.fuzzer json')
     elif program == '2':
         sp.docker_down()
         sp.upgrade_db()
-        subprocess.run('docker-compose run -e FLASK_DEBUG=1 -p 5005:5005 api '
+        subprocess.call('docker-compose run -e FLASK_DEBUG=1 -p 5005:5005 api '
                        'python -m tests_integration.fuzzer prompts')
     elif program == 'c':
         click.clear()
