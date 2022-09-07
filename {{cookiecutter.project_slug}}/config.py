@@ -12,9 +12,7 @@ import json
 import os
 import datetime
 import logging
-from pythonjsonlogger import jsonlogger
 from dotenv import load_dotenv
-from google.cloud import secretmanager
 
 
 __author__ = """{{ cookiecutter.full_name.replace('\"', '\\\"') }}"""
@@ -36,34 +34,8 @@ def parse_env_boolean(env_var):
         return True
 
 
-def load_secrets(project_id, secret_id, version_id):
-    """
-    Load secrets from Google Secrets Manager
-    Access the payload for the given secret version if one exists. The version
-    can be a version number as a string (e.g. "5") or an alias (e.g. "latest").
-    """
-    # If a Google Cloud environment isn't specified, skip this step.
-    if project_id is None or secret_id is None:
-        print(f'failed to load secrets for project={project_id} and secret_id={secret_id}')
-        return
-    # Create the Secret Manager client.
-    client = secretmanager.SecretManagerServiceClient()
-    # Build the resource name of the secret version.
-    name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
-    # Access the secret version.
-    # noinspection PyTypeChecker
-    response = client.access_secret_version(request={"name": name})
-    # Parse the secret payload. Should be one key=val pair per line
-    payload = response.payload.data.decode("UTF-8")
-    secrets = {line.split('=')[0]: line.split('=')[1] for line in payload.split('\n')}
-    for key, val in secrets.items():
-        os.environ[key] = str(val)
-
-
 def get_logger_handler():
     log_handler = logging.StreamHandler()
-    formatter = jsonlogger.JsonFormatter()
-    log_handler.setFormatter(formatter)
     log_handler.setLevel(os.environ.get('LOG_LEVEL', 'DEBUG'))
     return log_handler
 
@@ -186,8 +158,6 @@ class Config(object):
     PROJECT_ID = os.environ.get('PROJECT_ID')
     SECRET_ID = os.environ.get('SECRET_ID')
     SECRET_VERSION = os.environ.get('SECRET_VERSION', 'latest')
-    if PROJECT_ID is not None and SECRET_ID is not None:
-        load_secrets(project_id=PROJECT_ID, secret_id=SECRET_ID, version_id=SECRET_VERSION)
     # host and port are set prioritized by specificity. More specific variables overwrite more general ones.
     HOST = os.environ.get('HOST') or "0.0.0.0"  # Only used in Config
     PORT = os.environ.get('PORT') or "5000"
