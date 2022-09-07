@@ -49,7 +49,6 @@ services:
     volumes:
       - ./api:/srv/api
       - ./client:/srv/client
-      - ./common:/srv/common
       - ./etl:/srv/etl
       - ./tests:/srv/tests
       - ./data:/srv/data

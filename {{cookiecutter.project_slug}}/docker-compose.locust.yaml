@@ -8,8 +8,7 @@ services:
     ports:
      - "8089:8089"
     volumes:
-      - ./app:/srv/app
-      - ./common:/srv/common
+      - ./api:/srv/api
       - ./static:/srv/static
       - ./migrations:/srv/migrations
       - ./tests:/srv/tests
@@ -42,8 +41,7 @@ services:
       - master
       - chrome
     volumes:
-      - ./app:/srv/app
-      - ./common:/srv/common
+      - ./api:/srv/api
       - ./static:/srv/static
       - ./migrations:/srv/migrations
       - ./tests:/srv/tests
