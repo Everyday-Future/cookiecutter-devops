@@ -44,11 +44,11 @@ services:
       - RECAPTCHA_ENABLED=False
       - DATABASE_URL=postgresql://postgres:docker@db:5432
       - SERVER_URL=http://api:5000
-      - CLIENT_SERVER_URL=http://client:3000
+      - CLIENT_SERVER_URL=http://frontend:3000
       - WEBDRIVER_URL=http://chrome:4444/wd/hub
     volumes:
       - ./api:/srv/api
-      - ./client:/srv/client
+      - ./frontend:/srv/frontend
       - ./etl:/srv/etl
       - ./tests:/srv/tests
       - ./data:/srv/data

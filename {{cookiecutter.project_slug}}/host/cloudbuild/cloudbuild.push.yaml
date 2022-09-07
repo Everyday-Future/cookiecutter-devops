@@ -26,12 +26,12 @@ steps:
 
 #   # Get secrets and model files
 #   # ------------------------------------
-# Integration client secrets
+# Integration frontend secrets
   - name: gcr.io/cloud-builders/gcloud
-    id: 'client-integration-secrets'
+    id: 'frontend-integration-secrets'
     waitFor: [build-start]
     entrypoint: 'bash'
-    args: [ '-c', "gcloud secrets versions access latest --secret=integration_env --format='get(payload.data)' | tr '_-' '/+' | base64 -d > client/.env.local" ]
+    args: [ '-c', "gcloud secrets versions access latest --secret=integration_env --format='get(payload.data)' | tr '_-' '/+' | base64 -d > frontend/.env.local" ]
 # Integration api secrets
   - name: gcr.io/cloud-builders/gcloud
     id: 'integration-secrets'
@@ -45,7 +45,7 @@ steps:
   # Docker-compose selenium standalone chrome env for running integration tests here.
   - name: 'gcr.io/$PROJECT_ID/docker-compose'
     id: 'build-docker'
-    waitFor: [integration-secrets, client-integration-secrets]
+    waitFor: [integration-secrets, frontend-integration-secrets]
     args: [
         '-f', 'docker-compose.yaml',
         '-f', 'docker-compose.integration.yaml',
@@ -112,18 +112,18 @@ steps:
 
 #   # Pull caches and build all images (in parallel with tests)
 #   # ------------------------------------
-# private client deploy - secret
+# private frontend deploy - secret
   - name: gcr.io/cloud-builders/gcloud
-    id: 'client-private-build-secrets'
+    id: 'frontend-private-build-secrets'
     waitFor: [build-docker]
     entrypoint: 'bash'
-    args: [ '-c', "gcloud secrets versions access latest --secret=${_CLIENT_STAGING_SECRET} --format='get(payload.data)' | tr '_-' '/+' | base64 -d > client/.env.local" ]
-#   private client deploy - build
+    args: [ '-c', "gcloud secrets versions access latest --secret=${_CLIENT_STAGING_SECRET} --format='get(payload.data)' | tr '_-' '/+' | base64 -d > frontend/.env.local" ]
+#   private frontend deploy - build
   - name: 'gcr.io/$PROJECT_ID/docker-compose'
-    id: 'build-client-private-deploy'
-    waitFor: [client-private-build-secrets]
+    id: 'build-frontend-private-deploy'
+    waitFor: [frontend-private-build-secrets]
     entrypoint: ./host/cloudbuild/build.sh
-    args: ["client", "$PROJECT_ID", "staging", "client"]
+    args: ["frontend", "$PROJECT_ID", "staging", "frontend"]
 #   api and host images
   - name: 'gcr.io/$PROJECT_ID/docker-compose'
     id: 'build-api'
@@ -144,12 +144,12 @@ steps:
     waitFor: [build-api]
     entrypoint: ./host/cloudbuild/push_tag.sh
     args: ["api", "staging", "$PROJECT_ID", "staging"]
-  # client private
+  # frontend private
   - name: gcr.io/cloud-builders/docker
-    id: 'client-deploy-push-private'
-    waitFor: [build-client-private-deploy]
+    id: 'frontend-deploy-push-private'
+    waitFor: [build-frontend-private-deploy]
     entrypoint: ./host/cloudbuild/push_tag.sh
-    args: ["client", "staging", "$PROJECT_ID", "staging"]
+    args: ["frontend", "staging", "$PROJECT_ID", "staging"]
   # host
   - name: gcr.io/cloud-builders/docker
     id: 'host-deploy-push'
@@ -166,12 +166,12 @@ steps:
     waitFor: [integration-tests-passed]
     entrypoint: ./host/cloudbuild/deploy_api_run.sh
     args: ["api", "staging", "$PROJECT_ID", "staging"]
-  # client private
+  # frontend private
   - name: gcr.io/cloud-builders/gcloud
-    id: 'client-staging-private-deploy'
+    id: 'frontend-staging-private-deploy'
     waitFor: [integration-tests-passed]
-    entrypoint: ./host/cloudbuild/deploy_client_run.sh
-    args: ["client", "staging", "$PROJECT_ID", "staging"]
+    entrypoint: ./host/cloudbuild/deploy_frontend_run.sh
+    args: ["frontend", "staging", "$PROJECT_ID", "staging"]
 
 
 #   # Deploy to Cloud Functions staging
@@ -210,27 +210,27 @@ steps:
 
   # Deploy to Cloud Run prod
   # ------------------------------------
-  # client - prod
+  # frontend - prod
   - name: gcr.io/cloud-builders/gcloud
-    id: 'client-prod-secrets'
+    id: 'frontend-prod-secrets'
     waitFor: [acceptance-tests-passed]
     entrypoint: 'bash'
-    args: [ '-c', "gcloud secrets versions access latest --secret=${_CLIENT_PROD_SECRET} --format='get(payload.data)' | tr '_-' '/+' | base64 -d > client/.env.local" ]
+    args: [ '-c', "gcloud secrets versions access latest --secret=${_CLIENT_PROD_SECRET} --format='get(payload.data)' | tr '_-' '/+' | base64 -d > frontend/.env.local" ]
   - name: 'gcr.io/$PROJECT_ID/docker-compose'
-    id: 'build-client-prod'
+    id: 'build-frontend-prod'
     entrypoint: ./host/cloudbuild/build.sh
-    args: ["client", "$PROJECT_ID", "prod", "client"]
-    waitFor: [client-prod-secrets]
+    args: ["frontend", "$PROJECT_ID", "prod", "frontend"]
+    waitFor: [frontend-prod-secrets]
   - name: gcr.io/cloud-builders/docker
-    id: 'client-prod-push'
-    waitFor: [build-client-prod]
+    id: 'frontend-prod-push'
+    waitFor: [build-frontend-prod]
     entrypoint: ./host/cloudbuild/push_tag.sh
-    args: ["client", "prod", "$PROJECT_ID", "prod"]
+    args: ["frontend", "prod", "$PROJECT_ID", "prod"]
   - name: gcr.io/cloud-builders/gcloud
-    id: 'client-prod-deploy'
-    waitFor: [client-prod-push]
-    entrypoint: ./host/cloudbuild/deploy_client_run.sh
-    args: ["client", "prod", "$PROJECT_ID", "prod"]
+    id: 'frontend-prod-deploy'
+    waitFor: [frontend-prod-push]
+    entrypoint: ./host/cloudbuild/deploy_frontend_run.sh
+    args: ["frontend", "prod", "$PROJECT_ID", "prod"]
   # api - prod
   - name: gcr.io/cloud-builders/docker
     id: 'api-prod-push'
@@ -262,7 +262,7 @@ steps:
   # -------------------------------------------
   - name: 'gcr.io/$PROJECT_ID/docker-compose'
     id: 'smoke-tests'
-    waitFor: [api-prod-deploy, client-prod-deploy]
+    waitFor: [api-prod-deploy, frontend-prod-deploy]
     args: [
         '-f', 'docker-compose.yaml',
         '-f', 'docker-compose.integration.yaml',

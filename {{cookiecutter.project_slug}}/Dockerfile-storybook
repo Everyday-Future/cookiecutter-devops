@@ -1,17 +1,17 @@
 # Multi-stage build for all Luminary Handbook client images
 
-FROM mhart/alpine-node:14 AS client-base
+FROM mhart/alpine-node:14 AS frontend-base
 # install dependencies
 WORKDIR /app
-COPY client/package.json client/package-lock.json /app/client/
+COPY frontend/package.json frontend/package-lock.json /app/frontend/
 # Copy all local files into the image.
-COPY /client/src /app/client/src
-COPY /client/docker.env /app/client/.env
-COPY /client/static /app/client/static
-COPY /client/jsconfig.json /app/client/jsconfig.json
-COPY /client/svelte.config.js /app/client/svelte.config.js
-#COPY /client/svelte.config.js /app/client/svelte.config.cjs
-WORKDIR /app/client
+COPY /frontend/src /app/frontend/src
+COPY /frontend/docker.env /app/frontend/.env
+COPY /frontend/static /app/frontend/static
+COPY /frontend/jsconfig.json /app/frontend/jsconfig.json
+COPY /frontend/svelte.config.js /app/frontend/svelte.config.js
+#COPY /frontend/svelte.config.js /app/frontend/svelte.config.cjs
+WORKDIR /app/frontend
 RUN npm install
 EXPOSE $PORT
 ENV NODE_OPTIONS="--max-old-space-size=1024"
