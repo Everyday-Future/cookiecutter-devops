@@ -1,4 +1,4 @@
-# Multi-stage build for all Luminary Handbook images
+# Multi-stage build for all images
 
 # base - os and basic requirements
 FROM python:3.9.7-slim-buster as base
@@ -36,23 +36,9 @@ CMD ["sh", "boot.sh"]
 
 # host - use for globally-scoped processes like testing
 FROM api AS host
-# Get the rest of the requirements
-COPY api/requirements.txt api_requirements.txt
-COPY host/requirements.txt host_requirements.txt
-#COPY etl/requirements.txt etl_requirements.txt
-RUN pip install --upgrade pip && \
-pip install -r api_requirements.txt && \
-#pip install -r etl_requirements.txt && \
-pip install -r host_requirements.txt
-ENV FLASK_APP backend.py
 ENV SERVER_MODE host
 # Get the rest of the files
-COPY api api
-COPY static static
-COPY babel.cfg .
-COPY etl etl
 COPY tests tests
-COPY config.json .
 
 
 FROM host as locust

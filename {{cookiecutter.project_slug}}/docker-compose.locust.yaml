@@ -24,9 +24,13 @@ services:
     command: locust -f /srv/tests/locustfile.py --master -H http://master:8089
 
   chrome:
-    image: selenium/standalone-chrome:3.141.59-yttrium
-    container_name: chrome
+    image: selenium/standalone-chrome:4.7.2-20221219
     shm_size: '2gb'
+    environment:
+      - START_XVFB=false
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_NODE_MAX_SESSIONS=5
+      - JAVA_OPTS=-XX:ActiveProcessorCount=5
     networks:
       - default
     deploy:

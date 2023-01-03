@@ -180,7 +180,7 @@ class IntegrationBaseCase(unittest.TestCase):
         # Set test variables for pre-registered test admin
         self.timestamp = int(time.monotonic_ns())
         self.admin_username = f"admin{self.timestamp}"
-        self.admin_email = f"admin{self.timestamp}@luminaryhandbook.com"
+        self.admin_email = f"admin{self.timestamp}@domain.com"
         self.admin_password = "notinproduction"
         # create test admin user
         self.admin = User(email=self.admin_email)
@@ -238,7 +238,7 @@ class AcceptanceBaseCase(unittest.TestCase):
         # Set test variables for pre-registered test admin
         self.admin_timestamp = int(time.time() * 1000)
         self.admin_username = f"admin{self.admin_timestamp}"
-        self.admin_email = f"admin{self.admin_timestamp}@luminaryhandbook.com"
+        self.admin_email = f"admin{self.admin_timestamp}@domain.com"
         self.admin_password = f"password#{random.randint(0, 99999999)}#"
 
     def tearDown(self):
@@ -274,7 +274,7 @@ class PreloadedEnv:
         self.driver = driver
         self.timestamp = int(time.monotonic_ns())
         self.username = f"employee{self.timestamp}"
-        self.email = f"misc{self.timestamp}@luminaryhandbook.com"
+        self.email = f"misc{self.timestamp}@domain.com"
         self.password = f"password#{random.randint(0, 99999999)}#"
         self.user = None
         self.customizer_data = {}

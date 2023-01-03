@@ -214,7 +214,7 @@ class BannedToken(DataMixin, db.Model):
 class User(DataMixin, db.Model):
     """
     Representation of a User.
-    Anonymous users are given fake email addresses @luminaryhandbook.com.
+    Anonymous users are given fake email addresses
     Registered users are identified with is_anon=False
     """
     plural = 'users'
@@ -412,14 +412,14 @@ class Address(DataMixin, db.Model):
 
 
 def get_all_tables():
-    """ Get all of the table models for testing and introspection """
+    """ Get all the table models for testing and introspection """
     return [Mailinglist, Contact, BannedToken, User, Address]
 
 
 def get_all_table_demos(debug_mode=False):
     username = f"test{random.randint(0, 9999999)}"
     password = 'temppassword'
-    email_address = f"{random.randint(0, 9999999)}@luminaryhandbook.com"
+    email_address = f"{random.randint(0, 9999999)}@{{ project_slug }}.com"
     user = User.create_new(email=email_address)
     user.set_password(password)
     addr = Address.create_new(user_id=user.id, first_name="Steven", last_name="Sutton",
