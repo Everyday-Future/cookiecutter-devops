@@ -160,3 +160,5 @@ frontend/.svelte-kit
 frontend/package
 frontend/.env
 frontend/docker.env
+frontend/vite.config.js.timestamp-*
+frontend/vite.config.ts.timestamp-*
