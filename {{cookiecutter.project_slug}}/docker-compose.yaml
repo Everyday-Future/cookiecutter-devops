@@ -28,7 +28,7 @@ services:
       - ENV=testing
       - DEBUG=True
       - USE_HTTPS=False
-      - CLIENT_SERVER_URL=http://client:3000
+      - CLIENT_SERVER_URL=http://frontend:3000
       - DATABASE_URL=postgresql://postgres:docker@db:5432
       - SQLALCHEMY_DATABASE_URI=postgresql://postgres:docker@db:5432
     volumes:
