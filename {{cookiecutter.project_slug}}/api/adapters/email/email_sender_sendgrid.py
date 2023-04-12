@@ -19,7 +19,7 @@ class SendgridSender:
                          from_email=self.from_email
 
         :param subject: Subject line for the email
-        :param from_email: "From" address for the email in the @luminaryhandbook.com domain.
+        :param from_email: "From" address for the email.
         :param to_list: Email recipient(s). String or list of strings.
         :param txt_content: Path to the txt template to use for the email.
         :param html_content: Path to the html template to use for the email.

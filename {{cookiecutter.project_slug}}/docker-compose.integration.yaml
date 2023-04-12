@@ -8,16 +8,22 @@ services:
       - ./local.env
     environment:
       - WEBDRIVER_URL=http://chrome:4444/wd/hub
+
   chrome:
-    image: selenium/standalone-chrome:3.141.59-yttrium
-    container_name: chrome
+    image: selenium/standalone-chrome:4.7.2-20221219
     shm_size: '2gb'
+    environment:
+      - START_XVFB=false
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_NODE_MAX_SESSIONS=5
+      - JAVA_OPTS=-XX:ActiveProcessorCount=5
     networks:
       - default
     deploy:
       replicas: 1
     ports:
       - "4444:4444"
+
   # Container within which to run the integration tests
   host:
     build:

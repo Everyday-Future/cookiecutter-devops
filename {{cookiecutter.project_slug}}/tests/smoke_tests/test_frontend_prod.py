@@ -32,17 +32,6 @@ class PreloadedEnvCase(BaseCase):
         time.sleep(0.5)
         self.assertTrue(self.env.has_browser_error())
 
-    def test_planner_customizer(self):
-        self.driver.get(server_url + '/customize/luminary-planner')
-        time.sleep(0.5)
-        self.driver.get(server_url + '/customize/luminary-planner')
-        time.sleep(0.5)
-        self.env.short_delay = 0.5
-        self.env.fill_planner_customizer()
-        self.assertIn('customize', self.driver.current_url.split('?')[0])
-        # Ensure that there have been no javascript errors
-        self.assertFalse(self.env.has_browser_error())
-
 
 class BasicCase(BaseCase):
 
@@ -104,43 +93,6 @@ class RoutesCase(BaseCase):
         self.render_routes(routes_list)
         time.sleep(0.3)
         self.render_routes(["auth/logout", "auth/register", "auth/login"])
-
-
-@unittest.skip('These tests cant be consistently run unless recaptcha can be disabled in production temporarily')
-class LoginCase(unittest.TestCase):
-
-    def setUp(self):
-        """Setup the test driver and create test users"""
-        self.driver = get_webdriver(is_headless=global_config.TEST_HEADLESS, remote_url=global_config.WEBDRIVER_URL)
-        self.driver.set_page_load_timeout(30)
-        self.driver.get(server_url)
-        self.env = PreloadedEnv(driver=self.driver, server_url=server_url)
-        # Set test variables for un-registered test user
-        self.username = self.env.username
-        self.email = self.env.email
-        self.password = self.env.password
-        # Set test variables for pre-registered test admin
-        self.admin_timestamp = int(time.time()*1000)
-        self.admin_username = os.environ.get('ADMIN_USERNAME')
-        self.admin_password = os.environ.get('ADMIN_PASSWORD')
-
-    def tearDown(self):
-        self.driver.quit()
-
-    @retry(**retry_config)
-    def test_admin_login(self):
-        """
-        Test that an admin user can login and that they will be redirected to
-        the admin homepage
-        """
-        self.driver.get(server_url + "/auth/login?next=index")
-        time.sleep(2.5)
-        # Fill in login form
-        self.driver.find_element_by_id("username").send_keys(self.admin_username)
-        self.driver.find_element_by_id("password").send_keys(self.admin_password)
-        self.driver.find_element_by_id("submit_btn").click()
-        time.sleep(2)
-        assert 'index' in self.driver.current_url
 
 
 if __name__ == '__main__':

@@ -1,6 +1,5 @@
 *.py[cod]
 venv/
-luminaryenv/
 *.egg-info/
 dist/
 settings.cfg
@@ -20,7 +19,6 @@ geckodriver.log
 msedgedriver.exe
 slides_creds.json
 token_compressor_sa.json
-luminary-production-*.json
 frontend_secrets.json
 
 # exclude everything in temp except the folder itself.
@@ -162,3 +160,5 @@ frontend/.svelte-kit
 frontend/package
 frontend/.env
 frontend/docker.env
+frontend/vite.config.js.timestamp-*
+frontend/vite.config.ts.timestamp-*

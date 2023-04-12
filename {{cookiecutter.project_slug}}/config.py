@@ -3,7 +3,7 @@
 Config
 
 App configuration for Flask.
-Can also be accessed as global_config outside of the Flask context.
+Can also be accessed as global_config outside the Flask context.
 
 """
 
@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 
 __author__ = """{{ cookiecutter.full_name.replace('\"', '\\\"') }}"""
 __email__ = '{{ cookiecutter.email }}'
+# noinspection SpellCheckingInspection
 base_key = 'tohmgs4dsfdsgsdfghsvaefev3587tyb63876bh84drtbubet'  # Simple key to be overridden in production
 
 
@@ -36,13 +37,17 @@ def parse_env_boolean(env_var):
 
 def get_logger_handler():
     log_handler = logging.StreamHandler()
+    # create logging formatter
+    formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s')
+    log_handler.setFormatter(formatter)
     log_handler.setLevel(os.environ.get('LOG_LEVEL', 'DEBUG'))
     return log_handler
 
 
 def get_logger():
-    logger = logging.getLogger()
+    logger = logging.getLogger('main')
     logger.addHandler(get_logger_handler())
+    logger.setLevel(os.environ.get('LOG_LEVEL', 'DEBUG'))
     return logger
 
 
@@ -107,7 +112,7 @@ class Version:
     @staticmethod
     def version_greater_or_equal(ver, target_ver):
         """
-        Check that a version number as major.minor.patch is greater than or equal to a target version number
+        Check that a version number is major.minor.patch is greater than or equal to a target version number
         """
         # Do a hierarchical comparison of the values
         major, minor, patch = Version.get_version_tuple(ver)
@@ -236,7 +241,3 @@ class Config(object):
     if not os.path.isdir(TEMP_DIR):
         os.makedirs(TEMP_DIR)
     TEST_PARALLEL = parse_env_boolean(os.environ.get('TEST_PARALLEL', False))
-
-    @staticmethod
-    def is_admin(username):
-        return username in ('admin', 'zack')
