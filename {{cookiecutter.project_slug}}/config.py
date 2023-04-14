@@ -229,6 +229,14 @@ class Config(object):
     # Database connections set up for Postgresql
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or "postgresql://postgres:tempdev@localhost:5432/frontend"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    DATA_LAKEHOUSE_NAME = os.environ.get('DATA_LAKEHOUSE_NAME')
+    # Storage resources
+    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    S3_REGION = os.environ.get("S3_REGION") or "us-east-2"
+    S3_BUCKET = os.environ.get("S3_BUCKET") or "luhadev"
+    GCP_PRODUCT_ID = os.environ.get("GCP_PRODUCT_ID")
+    GCP_CREDS_FILE = os.environ.get("GCP_BUCKET") or './static/creds/luminary-production-327f7da7bb2a.json'
     # Alerting resources
     SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
     SLACK_TOKEN = os.environ.get('SLACK_TOKEN')
