@@ -141,7 +141,8 @@ f - frontend server (kb to rebuild)
 b - rebuild all
 n - run notebook server
 r - run redirect server
-c - clean and rebuild all
+c - clean all
+C - clean and rebuild all
 ''')
 def run_server(mode):
     sp = SubProcessor()
@@ -192,6 +193,10 @@ def run_server(mode):
         subprocess.call(f'docker build -f Dockerfile-redirect -t redirect .', shell=True)
         subprocess.call(f'docker run -h redirect -it -p 5050:5000 --rm redirect', shell=True)
     elif mode == 'c':
+        # Clean all
+        sp.docker_down()
+        subprocess.call('docker system prune -a --force', shell=True)
+    elif mode == 'C':
         # Clean and rebuild all
         sp.docker_down()
         subprocess.call('docker system prune -a --force', shell=True)

@@ -44,19 +44,19 @@ services:
     ports:
       - 5000:5000
 
-  # The sveltekit web frontend
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile-frontend
-      target: frontend
-    networks:
-      - default
-    depends_on:
-      - db
-      - api
-    ports:
-      - 3000:3000
-    environment:
-      - PORT=3000
-      - NODE_ENV=development
+#   # The sveltekit web frontend
+#   frontend:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile-frontend
+#       target: frontend
+#     networks:
+#       - default
+#     depends_on:
+#       - db
+#       - api
+#     ports:
+#       - 3000:3000
+#     environment:
+#       - PORT=3000
+#       - NODE_ENV=development

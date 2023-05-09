@@ -30,8 +30,7 @@ if __name__ == '__main__':
 
     # Convert shell scripts for Windows
     shell_scripts = [os.path.join(PROJECT_DIRECTORY, '.__run_cli.sh'),
-                     os.path.join(PROJECT_DIRECTORY, 'boot.sh'),
-                     os.path.join(PROJECT_DIRECTORY, 'host', 'test_loop.sh')]
+                     os.path.join(PROJECT_DIRECTORY, 'boot.sh')]
     for shell_script in shell_scripts:
         with open(shell_script, "r") as fin:
             lines = []

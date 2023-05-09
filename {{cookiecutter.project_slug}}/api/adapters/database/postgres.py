@@ -107,3 +107,25 @@ class DatabasePostgres(Database):
             self.truncate_table(table_name=table_name)
         extras.execute_batch(self.cursor, sql, args_list, page_size=1000)
         self.conn.commit()
+
+    def list_tables(self):
+        """
+        Get tables as list of tuples like [(name, row_count, schema)]
+        for example [('user', 17, 'public'), ('product', 22, 'public'), ...]
+        :return:
+        :rtype:
+        """
+        self.cursor.execute("""
+        WITH tbl AS
+          (SELECT table_schema,
+                  TABLE_NAME
+           FROM information_schema.tables
+           WHERE TABLE_NAME not like 'pg_%'
+             AND table_schema in ('public'))
+        SELECT TABLE_NAME,
+               (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', table_schema, TABLE_NAME), FALSE, TRUE, '')))[1]::text::int AS rows_n,
+               table_schema
+        FROM tbl
+        ORDER BY rows_n DESC;
+        """)
+        return list(self.cursor.fetchall())

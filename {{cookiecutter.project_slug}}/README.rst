@@ -5,7 +5,7 @@
 
 
 Description
------------
+============
 
 {{ cookiecutter.project_short_description }}
 
@@ -83,8 +83,6 @@ Project Organization
     |   |   |-- database     <- Common functions for interchangeable database. Only postgres for now.
     |   |   |-- email        <- Send or schedule send emails. Only SendGrid for now.
     |   |   |-- storage      <- Work with cloud storage buckets in AWS and GCP
-    |
-    |-- frontend             <- Source code for the frontend, to be generated after compile
     |   |
     |   |-- routes           <- API routes for the Flask API
     |   |   |-- routes.py    <- main routes for the app
@@ -101,6 +99,8 @@ Project Organization
     |   |-- test-all.sh      <- Script for automatically running all tests and stopping at failure
     |   |-- cloudbuild       <- Compiled scripts for Google Cloud Build
     |   |-- functions        <- Cloud Functions like ETL and scheduled operations
+    |
+    |-- frontend             <- Simple Svelte frontend template
     |
     |-- tests                     <- Source code for all project tests (see Testing below)
         |-- unit_tests.py         <- Tests all app functions. >90% coverage expected.
@@ -129,53 +129,12 @@ Usage
 Testing the endpoint
 --------------------
 
-Once built and running, make a POST call to http://localhost:5000/api/search
+Once built and running, make a GET or POST call to http://localhost:5000/ping
 - Can perform this call to test using httpie:
 ``` bash
-http --form --json POST http://localhost:5000/api/search search_string='drink' search_mode='search_by_year'
+http --form --json POST http://localhost:5000/ping'
 ```
-Or use Postman or similar
-
-Understanding the response
---------------------------
-
-EXAMPLE:
-```json
-    {
-        "version": "0.1.65",
-        "search_string": "drink",
-        "search_mode": "search_by_year",
-        "results": {"flat": [{
-            "_id": "605de065af00da061f9d56bc",
-            "author.email": "xuan@technologyhumansandtaste.com",
-            "author.name": "Xuan",
-            "collaborator": "Ieoh Ming Pei",
-            "title": "Pyrabot",
-            "truthId": "",
-            "problemId": "607a1a42c8762f372fc2066e",
-            "Problem": "#N/A",
-            "Truth": "#N/A",
-            "description": "Have my head spinning around so I’m read 360° of the room",
-            "Theme": "Anatomy",
-            "Topic": "Spinning, Reading, Movement, Head",
-            "Format (Experience, Product, Service, Organizing Principle)": "Experience",
-            "Format Tag": "Exercise",
-            "Specific Output": "exercise",
-            "date": "2020-07-10T04:00:00.000Z",
-            "properties.formId": "1z3k5bwB6BJFiY0JXseP0sx4tnAURU9khNOQLw_DVZ9Q",
-            "timestamp": "2020-07-10T20:00:00.000Z"
-            }, {...}, ...],
-            "food": [{...}, {...}],
-            "acting": [{...}, {...}],
-        }]}
-    }
-```
-
-The main response keys are "search_string", "search_mode", and "results". The first two represent the data that
-created the search and are used for caching. The results are the full results from the query without paging.
-Instead, the full raw packet of data is handed to the frontend which handles parsing it out and rendering/hiding it.
-
-There are full swagger api docs available at /apidocs on the api server.
+Or use Postman or requests
 
 Deployment Strategy
 ===================
@@ -230,7 +189,8 @@ Testing Strategy
 Why we test
 -----------
 
-Fast and stable pipelines are built with aggressive testing. We use 3 kinds of tests in our CI/CD pipeline: unit, integration, and acceptance.
+Fast and stable pipelines are built with aggressive testing.
+We use 3 kinds of tests in our CI/CD pipeline: unit, integration, and acceptance.
 
 Unit tests are to ensure that individual "units" of code are working,
 as opposed to integration and acceptance tests, which are to ensure that the code
@@ -281,6 +241,17 @@ locust, a python library used for load testing apps. You can run a locust test a
 
     pip install locust
     locust -f tests/locustfile.py
+
+Other Testing Strategies
+------------------------
+
+We may test code in other ways that don't use the normal testing tools.
+
+Fuzzing is a form of testing where random or broken data is pushed through an input to watch for failures.
+
+Mutation Testing makes random changes to the code base and watches what percentage of changes make it through
+without tests failing. This is used to fix a code base that appears to have high test coverage but the tests
+aren't very thorough.
 
 
 Configuration/Secrets Strategy
