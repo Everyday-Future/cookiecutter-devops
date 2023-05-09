@@ -37,7 +37,7 @@ global_config = Config()
 
 def models_to_dict(models):
     """
-    Convert all of the referenced data in a table to dict, sorted by most recent first
+    Convert all the referenced data in a table to dict, sorted by most recent first
     """
     out_list = [model.to_dict() for model in models]
     return sorted(out_list, key=lambda x: x['created'], reverse=True)
