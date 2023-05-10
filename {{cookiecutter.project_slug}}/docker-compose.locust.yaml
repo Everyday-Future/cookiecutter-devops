@@ -9,7 +9,6 @@ services:
      - "8089:8089"
     volumes:
       - ./api:/srv/api
-      - ./static:/srv/static
       - ./migrations:/srv/migrations
       - ./tests:/srv/tests
       - ./data/test_assets:/srv/data/test_assets
@@ -46,7 +45,6 @@ services:
       - chrome
     volumes:
       - ./api:/srv/api
-      - ./static:/srv/static
       - ./migrations:/srv/migrations
       - ./tests:/srv/tests
       - ./data/test_assets:/srv/data/test_assets

@@ -77,7 +77,7 @@ steps:
   - name: python
     id: 'compile-secrets-and-explore'
     entrypoint: python
-    args: ["-m", "host.secret_builder", "${_STAGE}"]
+    args: ["-m", "secret_builder", "${_STAGE}"]
   - name: 'bash'
     id: 'print-directory'
     args: ['ls']

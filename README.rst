@@ -37,3 +37,5 @@ Then:
 * run the CLI interface with .__run_cli.bat (Windows) or .__run_cli.sh (Linux/Mac)
 * set up the frontend of your choice in the frontend directory. Make sure to keep the .env files in there
 * update the Dockerfile-frontend to reflect the new frontend.
+* if you're using pycharm, move one folder up, right-click on the folder, and select run as pycharm project.
+* Assign the system interpreter for pycharm to the venv instance of python

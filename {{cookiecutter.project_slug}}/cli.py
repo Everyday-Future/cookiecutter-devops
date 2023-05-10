@@ -118,15 +118,15 @@ class SubProcessor:
 
     @staticmethod
     def env_local():
-        subprocess.call('python -m host.secret_builder local', shell=True)
+        subprocess.call('python -m secret_builder local', shell=True)
 
     @staticmethod
     def env_docker():
-        subprocess.call('python -m host.secret_builder docker', shell=True)
+        subprocess.call('python -m secret_builder docker', shell=True)
 
     @staticmethod
     def env_acceptance():
-        subprocess.call('python -m host.secret_builder acceptance', shell=True)
+        subprocess.call('python -m secret_builder acceptance', shell=True)
 
 
 @click.command()

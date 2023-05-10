@@ -219,7 +219,7 @@ class Config(object):
     REMEMBER_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     IP_BAN_LIST_COUNT = os.environ.get('IP_BAN_LIST_COUNT', 10)
-    IP_BAN_REGEX_FILE = './static/ipban/nuisance.yaml'
+    IP_BAN_REGEX_FILE = './data/ipban/nuisance.yaml'
     POSTS_PER_PAGE = 10
     # Logging configuration
     LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT') or True
@@ -236,14 +236,13 @@ class Config(object):
     S3_REGION = os.environ.get("S3_REGION") or "us-east-2"
     S3_BUCKET = os.environ.get("S3_BUCKET") or "luhadev"
     GCP_PRODUCT_ID = os.environ.get("GCP_PRODUCT_ID")
-    GCP_CREDS_FILE = os.environ.get("GCP_BUCKET") or './static/creds/luminary-production-327f7da7bb2a.json'
+    GCP_CREDS_FILE = os.environ.get("GCP_BUCKET") or './data/creds/luminary-production-327f7da7bb2a.json'
     # Alerting resources
     SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
     SLACK_TOKEN = os.environ.get('SLACK_TOKEN')
     SLACK_CHANNEL = os.environ.get('SLACK_CHANNEL') or '#engineering'
     # Project organization
     PROJECT_DIR = os.path.dirname(__file__)
-    STATIC_DIR = os.environ.get('STATIC_DIR') or './static/'
     DATA_DIR = os.environ.get('DATA_DIR', os.path.join(PROJECT_DIR, 'data'))
     TEMP_DIR = os.environ.get('TEMP_DIR') or os.path.join(DATA_DIR, 'temp')
     if not os.path.isdir(TEMP_DIR):

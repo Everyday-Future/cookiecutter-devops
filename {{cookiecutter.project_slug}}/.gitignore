@@ -38,12 +38,6 @@ docs/build
 
 *.log
 *.db
-
-# exclude everything in temp except the folder itself.
-static/temp/*
-static/creds/*
-!static/temp/.gitkeep
-static/svg/*.png
 /*.ttf
 
 # flake8
