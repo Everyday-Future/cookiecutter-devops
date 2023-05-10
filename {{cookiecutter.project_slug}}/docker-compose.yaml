@@ -33,7 +33,6 @@ services:
       - SQLALCHEMY_DATABASE_URI=postgresql://postgres:docker@db:5432
     volumes:
       - ./api:/srv/api
-      - ./static:/srv/static
       - ./migrations:/srv/migrations
       - ./tests:/srv/tests
       - ./data/test_assets:/srv/data/test_assets
@@ -44,19 +43,19 @@ services:
     ports:
       - 5000:5000
 
-  # The sveltekit web frontend
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile-frontend
-      target: frontend
-    networks:
-      - default
-    depends_on:
-      - db
-      - api
-    ports:
-      - 3000:3000
-    environment:
-      - PORT=3000
-      - NODE_ENV=development
+#   # The sveltekit web frontend
+#   frontend:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile-frontend
+#       target: frontend
+#     networks:
+#       - default
+#     depends_on:
+#       - db
+#       - api
+#     ports:
+#       - 3000:3000
+#     environment:
+#       - PORT=3000
+#       - NODE_ENV=development

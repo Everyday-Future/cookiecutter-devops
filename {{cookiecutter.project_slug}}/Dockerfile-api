@@ -21,7 +21,6 @@ RUN apt update && \
 RUN pip install --upgrade pip && pip install -r requirements.txt
 # Get api files
 COPY api api
-COPY static static
 COPY migrations migrations
 COPY config.py .
 COPY config.json .

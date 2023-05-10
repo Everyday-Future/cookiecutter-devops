@@ -34,7 +34,7 @@ services:
       - default
     depends_on:
       - api
-      - frontend
+#       - frontend
       - chrome
     env_file:
       - ./local.env
@@ -58,7 +58,6 @@ services:
       - ./etl:/srv/etl
       - ./tests:/srv/tests
       - ./data:/srv/data
-      - ./static:/srv/static
       - ./docs:/srv/docs
       - ./host:/srv/host
       - ./migrations:/srv/migrations
