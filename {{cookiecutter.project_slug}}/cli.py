@@ -442,7 +442,6 @@ Which program would you like to run?
 
 s - server menu
 x - test menu
-t - toolkit menu
 d - docs menu
 g - git menu
 m - migrations menu

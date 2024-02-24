@@ -52,6 +52,7 @@ class DataMixin(object):
     """
     query: db.Query  # Type hint to autocomplete queries
     id = db.Column(db.BigInteger, primary_key=True, index=True, unique=True)
+    slug = db.Column(db.String(64), index=True)
     created = db.Column(db.DateTime, index=True, nullable=False, default=datetime.utcnow)
     updated = db.Column(db.DateTime, onupdate=datetime.utcnow, nullable=False, default=datetime.utcnow)
     data = db.Column(db.JSON, nullable=True, default={'version': global_config.VERSION, 'data': {}})
@@ -59,6 +60,10 @@ class DataMixin(object):
     def bump_updated(self):
         """ Indicate a table update by setting the 'updated' time to now """
         self.updated = datetime.utcnow()
+
+    @classmethod
+    def get_by_slug(cls, slug):
+        return cls.query.filter_by(slug=slug).first()
 
     @staticmethod
     def default_data(**kwargs):
@@ -102,6 +107,10 @@ class DataMixin(object):
         Increment a counter key in the data dict
         """
         self.update_data({key_name: self.get_data().get(key_name, 0) + 1})
+
+    def to_dict(self):
+        # Returns a dictionary with all attributes of the object that are not methods or dunders
+        return {k: v for k, v in self.__dict__.items() if not k.startswith("__") and not callable(v)}
 
 
 class Mailinglist(DataMixin, db.Model):
