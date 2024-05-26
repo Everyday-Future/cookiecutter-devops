@@ -1,20 +1,15 @@
 # Multi-stage build for all frontend images
 
-FROM mhart/alpine-node:14 AS frontend-base
+FROM mhart/alpine-node:16 AS frontend-base
 # install dependencies
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json /app/frontend/
 # Copy all local files into the image.
-COPY /frontend/src /app/frontend/src
-COPY /frontend/.env /app/frontend/.env
-COPY /frontend/static /app/frontend/static
-COPY /frontend/jsconfig.json /app/frontend/jsconfig.json
-COPY /frontend/svelte.config.js /app/frontend/svelte.config.js
-#COPY /frontend/svelte.config.js /app/frontend/svelte.config.cjs
+COPY /frontend /app/frontend
 WORKDIR /app/frontend
 RUN npm install --only=prod
-#RUN node node_modules/esbuild/install.js
 RUN npm run build
+
 ###
 # Only copy over the Node pieces we need
 ###

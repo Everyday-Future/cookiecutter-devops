@@ -3,14 +3,13 @@ import datetime
 import traceback
 from flask import jsonify
 from flask import current_app, request, _request_ctx_stack, abort
+from core.db.models import db, global_config, get_all_table_demos, User
+from core.daos.user import UserDAO
+from core.daos.addresses import AddressDAO
+from core.daos.contacts import ContactDAO
+from core.daos.mailinglist import MailingListDAO
 from api.routes.auth import token_auth
 from api import global_config, logger, ip_ban
-from api.models import db, global_config, get_all_table_demos, User
-from api.daos.user import UserDAO
-from api.daos.addresses import AddressDAO
-from api.daos.contacts import ContactDAO
-from api.daos.mailinglist import MailingListDAO
-from api.adapters.alert.alert_push import AlertStack
 from api.routes import bp
 from api.routes.errors import error_response
 
@@ -208,15 +207,6 @@ def create_contact():
     data = request.get_json(force=True)
     contact = ContactDAO.create(**data)
     return jsonify(contact.to_dict())
-
-
-@bp.route('/daily-update', methods=['GET', 'POST'])
-def daily_update():
-    """
-    Push a daily update across alert channels
-    """
-    AlertStack().daily_update()
-    return jsonify({'success': True})
 
 
 @bp.route('/subscribe', methods=['POST'])

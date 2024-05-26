@@ -1,4 +1,3 @@
-version: "3.7"
 
 services:
   db:
@@ -9,8 +8,8 @@ services:
       - 5432:5432
     environment:
       - POSTGRES_PASSWORD=docker
-  # The flask backend API
 
+  # The flask backend API
   api:
     build:
       context: .

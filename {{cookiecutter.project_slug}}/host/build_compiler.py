@@ -38,6 +38,11 @@ steps:
     entrypoint: pip
     args: ["install", "safety", "Jinja2==3.0.1", "python-dotenv==0.21.0, "--user"]
   - name: python
+    id: 'safety-check-core'
+    waitFor: [install-safety]
+    entrypoint: python
+    args: ["-m", "safety", "check", "-i", "39642", "-i", "44715", "-i", "51668", "-r", "core/requirements.txt", "--full-report"]
+  - name: python
     id: 'safety-check-api'
     waitFor: [install-safety]
     entrypoint: python

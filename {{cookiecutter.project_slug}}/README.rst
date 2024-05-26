@@ -67,6 +67,20 @@ Project Organization
     |   |-- test_gallery     <- Assets created from notebooks or processing. Not committed to code.
     |   |-- reports          <- Ad hoc reports from notebooks and testing
     |
+    |-- core                 <- Core python functionality for the app
+    |   |
+    |   |-- adapters         <- Interchangeable adapters to interact with cloud services
+    |   |   |-- alert        <- Push notifications with Slack and/or Zapier
+    |   |   |-- database     <- Common functions for interchangeable database. Only postgres for now.
+    |   |   |-- email        <- Send or schedule send emails. Only SendGrid for now.
+    |   |   |-- storage      <- Work with cloud storage buckets in AWS and GCP
+    |   |
+    |   |-- daos             <- Data Access Objects - simple interfaces to one or many database models
+    |   |   |-- user.py      <- main DAO for common user functions
+    |   |
+    |   |-- db               <- sqlalchemy database models
+    |       |-- models.py    <- Database models and architecture
+    |
     |-- docs                 <- A default Sphinx project; see sphinx-doc.org for details
     |   |-- make             <- Builder for docs, but use the CLI build scripts for more convenience
     |
@@ -78,21 +92,12 @@ Project Organization
     |
     |-- api                  <- Source code for the model server
     |   |-- __init__.py      <- Makes app a Python module. Contains the Flask app factory
-    |   |-- adapters         <- Interchangeable adapters to interact with cloud services
-    |   |   |-- alert        <- Push notifications with Slack and/or Zapier
-    |   |   |-- database     <- Common functions for interchangeable database. Only postgres for now.
-    |   |   |-- email        <- Send or schedule send emails. Only SendGrid for now.
-    |   |   |-- storage      <- Work with cloud storage buckets in AWS and GCP
     |   |
     |   |-- routes           <- API routes for the Flask API
     |   |   |-- routes.py    <- main routes for the app
     |   |   |-- auth.py      <- authentication infrastructure
     |   |
-    |   |-- daos             <- Data Access Objects - simple interfaces to one or many database models
-    |   |   |-- user.py      <- main DAO for common user functions
-    |   |
     |   |-- __init__.py      <- Flask initialization and configuration
-    |   |-- models.py        <- Database models and architecture
     |   |-- requirements.txt <- Dependencies specifically for the model server
     |
     |-- host                 <- Scripts and markdown for hosting within cloud services
@@ -100,7 +105,7 @@ Project Organization
     |   |-- cloudbuild       <- Compiled scripts for Google Cloud Build
     |   |-- functions        <- Cloud Functions like ETL and scheduled operations
     |
-    |-- frontend             <- Simple Svelte frontend template
+    |-- frontend             <- Simple Svelte/React frontend template
     |
     |-- tests                     <- Source code for all project tests (see Testing below)
         |-- unit_tests.py         <- Tests all app functions. >90% coverage expected.

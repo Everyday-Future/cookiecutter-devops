@@ -21,13 +21,6 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('../..'))
-sys.path.insert(0, os.path.abspath('../../..'))
-sys.path.insert(0, os.path.abspath('../../app'))
-sys.path.insert(0, os.path.abspath('../../common'))
-sys.path.insert(0, os.path.abspath('../../publisher'))
-sys.path.insert(0, os.path.abspath('../../etl'))
-sys.path.insert(0, os.path.abspath('../../host'))
-sys.path.insert(0, os.path.abspath('../../tests'))
 sys.setrecursionlimit(1500)
 
 import {{ cookiecutter.project_slug }}

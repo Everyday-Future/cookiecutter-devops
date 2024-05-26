@@ -1,4 +1,3 @@
-version: "3.7"
 
 services:
   # Add the integration secrets to auth with 3rd-party services
@@ -34,7 +33,6 @@ services:
       - default
     depends_on:
       - api
-#       - frontend
       - chrome
     env_file:
       - ./local.env

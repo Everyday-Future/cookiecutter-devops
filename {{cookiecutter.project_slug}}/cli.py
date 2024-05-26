@@ -86,6 +86,28 @@ class SubProcessor:
                     pass
 
     @staticmethod
+    def wait_for_version_number(target_url, target_version, max_timeout=300):
+        """
+        Wait for a server to answer with a version number in a json packet
+        to indicate that a new verison has been pushed.
+
+        This is used to trigger acceptance tests after a git tag/push macro.
+        """
+        start_time = time.time()
+        while True:
+            try:
+                reply = requests.get(target_url, timeout=5)
+                if reply.json().get('version') == target_version:
+                    return
+                elif (time.time() - start_time) > max_timeout:
+                    return
+            except requests.exceptions.Timeout:
+                if (time.time() - start_time) > max_timeout:
+                    return
+                else:
+                    pass
+
+    @staticmethod
     def git_commit(message):
         """
         bump the version number and tag in git with it
@@ -311,9 +333,8 @@ def run_tests(mode):
                         shell=True)
     elif mode == '5':
         # Safety - requirements vulnerability analysis
-        subprocess.call(f'pip install -r host/requirements.txt --user', shell=True)
         subprocess.call(f'python -m safety check -r api/requirements.txt --full-report', shell=True)
-        subprocess.call(f'python -m safety check -r host/functions/etl-lake/requirements.txt --full-report', shell=True)
+        subprocess.call(f'python -m safety check -r core/requirements.txt --full-report', shell=True)
     elif mode == '6':
         # Locust - load testing vs staging with a web ui
         sp.docker_down()
