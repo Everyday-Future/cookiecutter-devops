@@ -163,6 +163,7 @@ class Config(object):
     PROJECT_DIR = os.path.dirname(__file__)
     DATA_DIR = os.environ.get('DATA_DIR', os.path.join(PROJECT_DIR, 'data'))
     TEMP_DIR = os.environ.get('TEMP_DIR') or os.path.join(DATA_DIR, 'temp')
+    TEST_GALLERY = os.environ.get('TEST_GALLERY') or os.path.join(DATA_DIR, 'test_gallery')
     if not os.path.isdir(TEMP_DIR):
         os.makedirs(TEMP_DIR)
     TEST_PARALLEL = parse_env_boolean(os.environ.get('TEST_PARALLEL', False))
@@ -219,7 +220,7 @@ class Config(object):
     # Logging configuration
     LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT') or True
     # Database connections set up for Postgresql
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or "postgresql://postgres:tempdev@localhost:5432/frontend"
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or "postgresql://postgres:docker@db:5432"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DATA_LAKEHOUSE_NAME = os.environ.get('DATA_LAKEHOUSE_NAME')
     # Google cloud configs

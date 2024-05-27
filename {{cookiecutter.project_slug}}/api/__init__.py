@@ -49,4 +49,4 @@ def create_app(config_class=None):
 
     return app
 
-from core.db import models
+from core import models

@@ -1,5 +1,5 @@
 from flask import jsonify
-from core.db.models import db
+from core.models import db
 from api.routes import bp
 from api.routes.auth import basic_auth, token_auth
 

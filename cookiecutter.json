@@ -15,7 +15,7 @@
   "pypi_username": "{{ cookiecutter.github_username }}",
   "project_domain": "google.com",
   "version": "0.1.0",
-  "use_pytest": "t",
+  "use_pytest": "y",
   "use_pypi_deployment_with_travis": "n",
   "add_pyup_badge": "n",
   "command_line_interface": ["Click", "Argparse", "No command-line interface"],

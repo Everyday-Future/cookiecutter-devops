@@ -14,7 +14,7 @@ import unittest
 import time
 import requests
 from retry import retry
-from tests.fixtures import fullpage_screenshot, server_url, retry_config, get_webdriver, PreloadedEnv
+from tests.fixtures import BrowserController, retry_config, server_url
 from tests.fixtures import AcceptanceBaseCase as BaseCase
 from api import global_config
 
@@ -77,7 +77,7 @@ class RoutesCase(BaseCase):
             route_name = each_route.replace('/', '-')
             if global_config.DO_SCREENSHOTS is True:
                 # Render full screenshots of every page if running advanced tests
-                fullpage_screenshot(self.driver, dirname=screenshot_dir, fname=route_name + '.png')
+                BrowserController.get_screenshot(self.driver, fname=route_name + '.png')
         print('Page(s) not rendered correctly: ', [key for key, val in out_dict.items() if val is False])
         self.assertTrue(all(out_dict.values()))
 

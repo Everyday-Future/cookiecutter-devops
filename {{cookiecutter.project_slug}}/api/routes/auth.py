@@ -1,7 +1,7 @@
 import datetime
 
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
-from api.models import db, User
+from core.models import db, User
 from api.routes.errors import error_response
 
 basic_auth = HTTPBasicAuth()

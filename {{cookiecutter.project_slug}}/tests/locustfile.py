@@ -10,7 +10,7 @@ import time
 import random
 from locust import HttpUser, task, between
 from api import global_config
-from fixtures import PreloadedEnv, get_webdriver
+from fixtures import BrowserController, get_webdriver
 
 
 class QuickstartUser(HttpUser):
@@ -28,7 +28,7 @@ class QuickstartUser(HttpUser):
         """
         User customizes a book and gets the pdf printable
         """
-        env = PreloadedEnv(driver=self.driver, server_url=global_config.SERVER_URL)
+        env = BrowserController(driver=self.driver, server_url=global_config.SERVER_URL)
         self.driver.get(env.server_url + "/index")
         time.sleep(random.random())
         env.scroll_to(2000)

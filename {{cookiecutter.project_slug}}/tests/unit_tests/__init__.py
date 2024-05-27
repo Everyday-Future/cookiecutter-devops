@@ -6,7 +6,7 @@ import datetime
 import unittest
 import warnings
 from api import db, create_app, logging, global_config
-from api.models import User
+from core.models import User
 
 
 class BaseCase(unittest.TestCase):

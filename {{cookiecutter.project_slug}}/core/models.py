@@ -194,9 +194,8 @@ class BannedToken(DataMixin, db.Model):
     def __repr__(self):
         return f'<BannedToken id: token: {self.token}'
 
-    @staticmethod
-    def to_dict():
-        return {}
+    def to_dict(self):
+        return {'token': self.token}
 
     @staticmethod
     def create_new(token):
