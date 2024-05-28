@@ -10,17 +10,20 @@ Description
 {{ cookiecutter.project_short_description }}
 
 
+
 Requirements
 ============
 
 In order to run all of the functions of this codebase, you'll need:
 - At least 1GB of space
-- At least 2GB of RAM
+- At least 2GB of RAM free
+- Recommend 16+ gigs of RAM for Docker functions
 
 Follow the instructions below to get everything set up and running on your machine.
 
-Required Programs
------------------
+
+Required Programs For Microservices
+-----------------------------------
 
 This project only requires 2 programs to work - docker and git.
 Docker is used to create "containerized" environment for services to make everything cross-platform.
@@ -33,15 +36,33 @@ Git can be downloaded here - https://git-scm.com/downloads
 
 Once you get git all set up, use it to clone this repo so that you can work with it locally.
 
+Docker is the easy way to use this codebase, but you can also operate it within your native environment by creating
+a new environment and installing the requirements in requirements-core.txt (and requirements-api.txt to run the api)
+
+
+Required Programs For Local Administration
+------------------------------------------
+
+While the full software stack has been dockerized and doesn't require much from the host OS, there are a lot of
+helpful tools for local development and administration in the command-line interface for this app.
+
+In order to run the cli, you'll need python 3.8+ in your host environment. Then you can install just the bare
+requirements in requirements-cli.txt to get the cli up and going. The CLI will help manage the docker infrastructure
+necessary to run applications, run tests, build docs, build secrets for different environments, and more. See
+the command-line interface section below for more details.
+
+To bring the system up for local testing or debugging, first bring up the backend with the CLI, then navigate to
+/frontend and bring up the frontend with "npm run dev" This requires Node 18+ in order to be run locally.
+
 Required Files
 --------------
 
 In addition to the programs listed above, there are a few files you'll need in order to run the program correctly.
 
-Edit the secret--template.env and matching values files to remove the .txt
+Copy the .env.template file and remove the .template to create your .env file
 
-Then add any secrets that you'd like to include. Finally, recompile the .env files for each environement using the
-env secret compiler (e) in the command-line interface.
+Then add any secrets that you'd like to include. This will customize the app to your environment and use your
+secrets for auth and database connections.
 
 Command-Line Interface
 ----------------------
@@ -67,6 +88,20 @@ Project Organization
     |   |-- test_gallery     <- Assets created from notebooks or processing. Not committed to code.
     |   |-- reports          <- Ad hoc reports from notebooks and testing
     |
+    |-- core                 <- Core python functionality for the app
+    |   |
+    |   |-- adapters         <- Interchangeable adapters to interact with cloud services
+    |   |   |-- alert        <- Push notifications with Slack and/or Zapier
+    |   |   |-- database     <- Common functions for interchangeable database. Only postgres for now.
+    |   |   |-- email        <- Send or schedule send emails. Only SendGrid for now.
+    |   |   |-- storage      <- Work with cloud storage buckets in AWS and GCP
+    |   |
+    |   |-- daos             <- Data Access Objects - simple interfaces to one or many database models
+    |   |   |-- user.py      <- main DAO for common user functions
+    |   |
+    |   |-- db               <- sqlalchemy database models
+    |       |-- models.py    <- Database models and architecture
+    |
     |-- docs                 <- A default Sphinx project; see sphinx-doc.org for details
     |   |-- make             <- Builder for docs, but use the CLI build scripts for more convenience
     |
@@ -78,29 +113,20 @@ Project Organization
     |
     |-- api                  <- Source code for the model server
     |   |-- __init__.py      <- Makes app a Python module. Contains the Flask app factory
-    |   |-- adapters         <- Interchangeable adapters to interact with cloud services
-    |   |   |-- alert        <- Push notifications with Slack and/or Zapier
-    |   |   |-- database     <- Common functions for interchangeable database. Only postgres for now.
-    |   |   |-- email        <- Send or schedule send emails. Only SendGrid for now.
-    |   |   |-- storage      <- Work with cloud storage buckets in AWS and GCP
     |   |
     |   |-- routes           <- API routes for the Flask API
     |   |   |-- routes.py    <- main routes for the app
     |   |   |-- auth.py      <- authentication infrastructure
     |   |
-    |   |-- daos             <- Data Access Objects - simple interfaces to one or many database models
-    |   |   |-- user.py      <- main DAO for common user functions
-    |   |
     |   |-- __init__.py      <- Flask initialization and configuration
-    |   |-- models.py        <- Database models and architecture
-    |   |-- requirements.txt <- Dependencies specifically for the model server
+    |   |-- requirements.txt <- Dependencies specifically for the model server. May be appended with special extensions
     |
     |-- host                 <- Scripts and markdown for hosting within cloud services
     |   |-- test-all.sh      <- Script for automatically running all tests and stopping at failure
     |   |-- cloudbuild       <- Compiled scripts for Google Cloud Build
     |   |-- functions        <- Cloud Functions like ETL and scheduled operations
     |
-    |-- frontend             <- Simple Svelte frontend template
+    |-- frontend             <- Simple Svelte/React frontend template
     |
     |-- tests                     <- Source code for all project tests (see Testing below)
         |-- unit_tests.py         <- Tests all app functions. >90% coverage expected.
@@ -135,6 +161,23 @@ Once built and running, make a GET or POST call to http://localhost:5000/ping
 http --form --json POST http://localhost:5000/ping'
 ```
 Or use Postman or requests
+
+
+Testing the system
+------------------
+
+The easiest way to run the tests is through the testing menu in the command-line interface.
+
+Simply run the cli, select "t" for tests, then choose which tests to run.
+
+Alternatively, you can have a look at the contents of the cli.py file to find the commands to run the tests
+that are called through that automation.
+
+You may want to run tests in your local environment so that you can set TEST_HEADLESS=False and watch the chrome
+integration tests. In that case, you'll want to get an instance of chromedriver that matches your current instance
+of chrome. Just download and add to the top level of your project directory.
+
+You'll find chromedriver downloads here - https://chromedriver.chromium.org/downloads
 
 Deployment Strategy
 ===================
@@ -233,6 +276,12 @@ Acceptance tests are for testing the API in a staging environment which exactly 
 
 Tag and push the model to start the CI/CD pipeline. If all tests pass, the current version will be pushed to staging.
 
+Smoke Tests
+-----------
+
+Smoke tests ensure that production has correctly deployed and is working. It is a very small number of somewhat
+difficult tests so that production can be rolled back if any fail.
+
 Load Testing
 ------------
 
@@ -265,15 +314,6 @@ These files are compiled using a templating system to change the base secret fil
 injecting the settings for the targeted environment from (secret--template-values.env).
 
 These two secrets are used to generate the secrets for all of the environments for the app.
-
-Client Code names
------------------
-
-Because we need to adapt the SSO system to a variety of clients, we have to build different frontend apps for each
-one. We need to identify what secret to get for that without storing client names in the code. So in the code,
-they have animal names. Those names correspond to the entries in the secret--template-values.env file which
-also shows the real client name. So they can be looked up either by that file or using the Cloud Run domains page -
-https://console.cloud.google.com/run/domains?cloudshell=false&project=utility-range-256119
 
 
 Troubleshooting

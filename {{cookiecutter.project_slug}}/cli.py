@@ -65,9 +65,13 @@ class SubProcessor:
         # Build and test all
         SubProcessor.docker_down()
         click.clear()
+        SubProcessor.env_docker()
         SubProcessor.docker_build(force_rm=True)
-        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
-                        'run -e TEST_PARALLEL=True host bash host/test_all.sh', shell=True)
+        subprocess.call('docker compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+                        'run host python -m pytest tests/unit_tests ', shell=True)
+        subprocess.call('docker compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+                        'run -e TEST_PARALLEL=True host python -m pytest tests/integration_tests ',
+                        shell=True)
 
     @staticmethod
     def wait_for_server_up(target_url, max_timeout=300):
@@ -79,6 +83,28 @@ class SubProcessor:
             try:
                 requests.get(target_url, timeout=5)
                 return
+            except requests.exceptions.Timeout:
+                if (time.time() - start_time) > max_timeout:
+                    return
+                else:
+                    pass
+
+    @staticmethod
+    def wait_for_version_number(target_url, target_version, max_timeout=300):
+        """
+        Wait for a server to answer with a version number in a json packet
+        to indicate that a new verison has been pushed.
+
+        This is used to trigger acceptance tests after a git tag/push macro.
+        """
+        start_time = time.time()
+        while True:
+            try:
+                reply = requests.get(target_url, timeout=5)
+                if reply.json().get('version') == target_version:
+                    return
+                elif (time.time() - start_time) > max_timeout:
+                    return
             except requests.exceptions.Timeout:
                 if (time.time() - start_time) > max_timeout:
                     return
@@ -292,8 +318,8 @@ def run_tests(mode):
     elif mode == '2':
         # Integration Tests
         sp.docker_down()
-        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
-                        'run -e TEST_PARALLEL=True host unittest-parallel --jobs 4 -s tests.integration_tests -vvv ',
+        subprocess.call('docker compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+                        'run -e TEST_PARALLEL=True host python -m pytest tests/integration_tests ',
                         shell=True)
     elif mode == '3':
         # Local Acceptance Tests
@@ -311,17 +337,14 @@ def run_tests(mode):
                         shell=True)
     elif mode == '5':
         # Safety - requirements vulnerability analysis
-        subprocess.call(f'pip install -r host/requirements.txt --user', shell=True)
         subprocess.call(f'python -m safety check -r api/requirements.txt --full-report', shell=True)
-        subprocess.call(f'python -m safety check -r host/functions/etl-lake/requirements.txt --full-report', shell=True)
+        subprocess.call(f'python -m safety check -r core/requirements.txt --full-report', shell=True)
     elif mode == '6':
         # Locust - load testing vs staging with a web ui
         sp.docker_down()
         subprocess.call('docker-compose -f docker-compose.locust.yaml up --scale worker=4', shell=True)
     elif mode == '8':
-        # Test all without building
-        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
-                        'run -e TEST_PARALLEL=True host bash host/test_all.sh', shell=True)
+        sp.test_all()
     elif mode == 'x':
         run_specific_tests()
 
@@ -442,7 +465,6 @@ Which program would you like to run?
 
 s - server menu
 x - test menu
-t - toolkit menu
 d - docs menu
 g - git menu
 m - migrations menu

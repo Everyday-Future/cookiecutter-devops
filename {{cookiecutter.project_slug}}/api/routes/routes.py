@@ -2,15 +2,12 @@
 import datetime
 import traceback
 from flask import jsonify
-from flask import current_app, request, _request_ctx_stack, abort
+from flask import current_app, request, abort
+from core.models import db, global_config, get_all_table_demos, User
+from core.daos.user import UserDAO
+from core.daos.addresses import AddressDAO
 from api.routes.auth import token_auth
 from api import global_config, logger, ip_ban
-from api.models import db, global_config, get_all_table_demos, User
-from api.daos.user import UserDAO
-from api.daos.addresses import AddressDAO
-from api.daos.contacts import ContactDAO
-from api.daos.mailinglist import MailingListDAO
-from api.adapters.alert.alert_push import AlertStack
 from api.routes import bp
 from api.routes.errors import error_response
 
@@ -20,7 +17,7 @@ def is_scraping_request():
     Determine if the request is from a scraper, which is assumed to be malicious.
     :return: True if bot, False if not
     """
-    user_agent = _request_ctx_stack.top.request.user_agent.string.lower()
+    user_agent = request.user_agent.string.lower()
     bot_names = ('python-requests', 'ahc', 'scrapy', 'catexplorador', 'cfnetwork',
                  'go-http-client', 'masscan', 'nmap', 'curl', 'wget', 'libfetch', 'aiohttp', 'urllib', 'fasthttp')
     is_bot_req = any([bn in user_agent for bn in bot_names])
@@ -36,7 +33,7 @@ def is_bot_request():
     Determine if the request is from a bot or not. A bot may be a scraper or a harmless crawler.
     :return: True if bot, False if not
     """
-    user_agent = _request_ctx_stack.top.request.user_agent.string.lower()
+    user_agent = request.user_agent.string.lower()
     bot_names = ('bot', 'googlestackdrivermonitoring', 'twitterbot', 'facebookexternal', 'bing', 'panscient.com',
                  'crawler', 'domtestcontaineragent', 'facebookexternalhit', 'semrush', 'google', 'webtech', 'axios')
     return any([bn in user_agent for bn in bot_names]) or is_scraping_request()
@@ -196,46 +193,4 @@ def logout():
     Log the user out
     """
     UserDAO(user=token_auth.current_user()).logout()
-    return jsonify({'success': True})
-
-
-@bp.route('/contact', methods=['POST'])
-@token_auth.login_required
-def create_contact():
-    """
-    Get a contact form submission
-    """
-    data = request.get_json(force=True)
-    contact = ContactDAO.create(**data)
-    return jsonify(contact.to_dict())
-
-
-@bp.route('/daily-update', methods=['GET', 'POST'])
-def daily_update():
-    """
-    Push a daily update across alert channels
-    """
-    AlertStack().daily_update()
-    return jsonify({'success': True})
-
-
-@bp.route('/subscribe', methods=['POST'])
-@token_auth.login_required
-def create_subscriber():
-    """
-    Sign up a new user to the mailing list
-    """
-    data = request.get_json(force=True)
-    subscriber = MailingListDAO.subscribe(name=data['name'], email=data['email'], message=data['message'])
-    return jsonify(subscriber.to_dict())
-
-
-@bp.route('/unsubscribe', methods=['PUT'])
-@token_auth.login_required
-def unsubscribe_user():
-    """
-    Update a user's mailing list subscriber status
-    """
-    data = request.get_json(force=True)
-    MailingListDAO.unsubscribe(data['email'])
     return jsonify({'success': True})

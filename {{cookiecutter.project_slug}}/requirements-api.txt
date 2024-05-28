@@ -1,0 +1,14 @@
+#
+# API Requirements
+#
+Flask==3.0.3
+flask-cors==4.0.1
+flask-ipban==1.1.5
+flask-httpauth==4.8.0
+Flask-Login==0.6.3
+Flask-Migrate==4.0.7
+Flask-Minify==0.42
+Flask-SQLAlchemy==3.1.1
+flask-talisman==1.1.0
+gunicorn==22.0.0
+pyjwt==2.8.0

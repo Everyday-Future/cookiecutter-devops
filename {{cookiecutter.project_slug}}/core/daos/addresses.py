@@ -1,6 +1,6 @@
 from api import db
-from api.models import Address, BaseDAO
-from api.daos.user import UserDAO
+from core.models import Address, BaseDAO
+from core.daos.user import UserDAO
 
 
 class AddressDAO(BaseDAO):

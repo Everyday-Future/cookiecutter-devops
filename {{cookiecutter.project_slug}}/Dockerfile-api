@@ -1,30 +1,28 @@
 # Multi-stage build for all images
 
 # base - os and basic requirements
-FROM python:3.9.7-slim-buster as base
+FROM python:3.10-slim as base
 # Apply global configs
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV SERVER_MODE base
 WORKDIR /srv
+# Get core requirements
+COPY requirements-core.txt .
+RUN pip install --upgrade pip && pip install -r requirements-core.txt
 
 
 # api - flask backend api
 FROM base AS api
 # Get api requirements
-COPY api/requirements.txt .
-RUN apt update && \
-    apt install -y iputils-ping poppler-utils && \
-    apt-get install -y software-properties-common && \
-    add-apt-repository ppa:inkscape.dev/stable \
-    && apt-get install -y inkscape
-RUN pip install --upgrade pip && pip install -r requirements.txt
+COPY requirements-api.txt .
+RUN pip install --upgrade pip && pip install -r requirements-api.txt
 # Get api files
+COPY core core
 COPY api api
 COPY migrations migrations
 COPY config.py .
 COPY config.json .
-COPY babel.cfg .
 COPY backend.py .
 COPY boot.sh .
 ENV FLASK_APP backend.py

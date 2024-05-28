@@ -157,12 +157,16 @@ class Config(object):
     TESTING = parse_env_boolean(os.environ.get('TESTING')) or DEBUG_MODE
     DEVELOPMENT = parse_env_boolean(os.environ.get('DEVELOPMENT')) or DEBUG_MODE
     # Load dotenv credentials if specified and available
-    if os.path.isfile('local.env'):
-        load_dotenv('local.env')
-    # Google cloud configs
-    PROJECT_ID = os.environ.get('PROJECT_ID')
-    SECRET_ID = os.environ.get('SECRET_ID')
-    SECRET_VERSION = os.environ.get('SECRET_VERSION', 'latest')
+    if os.path.isfile('.env'):
+        load_dotenv('.env')
+    # Project organization
+    PROJECT_DIR = os.path.dirname(__file__)
+    DATA_DIR = os.environ.get('DATA_DIR', os.path.join(PROJECT_DIR, 'data'))
+    TEMP_DIR = os.environ.get('TEMP_DIR') or os.path.join(DATA_DIR, 'temp')
+    TEST_GALLERY = os.environ.get('TEST_GALLERY') or os.path.join(DATA_DIR, 'test_gallery')
+    if not os.path.isdir(TEMP_DIR):
+        os.makedirs(TEMP_DIR)
+    TEST_PARALLEL = parse_env_boolean(os.environ.get('TEST_PARALLEL', False))
     # host and port are set prioritized by specificity. More specific variables overwrite more general ones.
     HOST = os.environ.get('HOST') or "0.0.0.0"  # Only used in Config
     PORT = os.environ.get('PORT') or "5000"
@@ -198,7 +202,6 @@ class Config(object):
     }
     print('SERVER_DICT', SERVER_DICT)
     # Simple switches
-    DO_MINIFY = parse_env_boolean(os.environ.get('DO_MINIFY', False))
     SEND_FILE_MAX_AGE_DEFAULT = os.environ.get('SEND_FILE_MAX_AGE_DEFAULT', 60*60*24)
     # Testing switches
     BASIC_TESTS = parse_env_boolean(os.environ.get('BASIC_TESTS', True))
@@ -209,27 +212,21 @@ class Config(object):
     SECRET_KEY = os.environ.get('SECRET_KEY') or base_key
     UID_SECRET_KEY = os.environ.get('UID_SECRET_KEY') or base_key
     SALT = os.environ.get('SALT') or base_key
-    UNSUB_SALT = os.environ.get('UNSUB_SALT') or base_key
     if ENV not in ('testing', 'development') and any([key == base_key for key in (SECRET_KEY, UID_SECRET_KEY, SALT)]):
         raise ValueError('all secrets must be overridden in production')
-    WTF_CSRF_TIME_LIMIT = None
-    SESSION_COOKIE_SECURE = not DEBUG_MODE
-    REMEMBER_COOKIE_SECURE = not DEBUG_MODE
-    SESSION_COOKIE_HTTPONLY = True
-    REMEMBER_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
-    IP_BAN_LIST_COUNT = os.environ.get('IP_BAN_LIST_COUNT', 10)
+    IP_BAN_LIST_COUNT = os.environ.get('IP_BAN_LIST_COUNT', 100)
     IP_BAN_REGEX_FILE = './data/ipban/nuisance.yaml'
-    POSTS_PER_PAGE = 10
+    POSTS_PER_PAGE = 20
     # Logging configuration
     LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT') or True
-    # Babel Translation
-    LANGUAGES = ['en', 'es']
-    MS_TRANSLATOR_KEY = os.environ.get('MS_TRANSLATOR_KEY')
     # Database connections set up for Postgresql
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or "postgresql://postgres:tempdev@localhost:5432/frontend"
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or "postgresql://postgres:docker@db:5432"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DATA_LAKEHOUSE_NAME = os.environ.get('DATA_LAKEHOUSE_NAME')
+    # Google cloud configs
+    PROJECT_ID = os.environ.get('PROJECT_ID')
+    SECRET_ID = os.environ.get('SECRET_ID')
+    SECRET_VERSION = os.environ.get('SECRET_VERSION', 'latest')
     # Storage resources
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
@@ -241,10 +238,3 @@ class Config(object):
     SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
     SLACK_TOKEN = os.environ.get('SLACK_TOKEN')
     SLACK_CHANNEL = os.environ.get('SLACK_CHANNEL') or '#engineering'
-    # Project organization
-    PROJECT_DIR = os.path.dirname(__file__)
-    DATA_DIR = os.environ.get('DATA_DIR', os.path.join(PROJECT_DIR, 'data'))
-    TEMP_DIR = os.environ.get('TEMP_DIR') or os.path.join(DATA_DIR, 'temp')
-    if not os.path.isdir(TEMP_DIR):
-        os.makedirs(TEMP_DIR)
-    TEST_PARALLEL = parse_env_boolean(os.environ.get('TEST_PARALLEL', False))

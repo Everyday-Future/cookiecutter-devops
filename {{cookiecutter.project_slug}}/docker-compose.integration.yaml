@@ -1,11 +1,8 @@
-version: "3.7"
 
 services:
   # Add the integration secrets to auth with 3rd-party services
   # Mount temporary volumes for testing
   api:
-    env_file:
-      - ./local.env
     environment:
       - WEBDRIVER_URL=http://chrome:4444/wd/hub
 
@@ -34,10 +31,7 @@ services:
       - default
     depends_on:
       - api
-#       - frontend
       - chrome
-    env_file:
-      - ./local.env
     environment:
       - ENV=testing
       - PORT=5011

@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 
 import os
-import time
 import unittest
 import datetime
 from config import Config
-from api import global_config, db
-from api.daos.user import UserDAO, User
+from api import global_config
 from tests.unit_tests import BaseCase
 
 
@@ -46,7 +44,10 @@ class RoutesCase(BaseCase):
 
     def setUp(self):
         super(RoutesCase, self).setUp()
-        self.tester = self.app.test_frontend(self)
+        self.app.config.update({
+            "TESTING": True,
+        })
+        self.tester = self.app.test_client()
 
     def test_index(self):
         """Ensure that the route loads correctly"""

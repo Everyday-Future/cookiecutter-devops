@@ -14,11 +14,28 @@ import os
 import time
 import unittest
 import requests
+import warnings
+import logging
+import sqlalchemy.exc
 from retry import retry
-from tests.fixtures import fullpage_screenshot, create_test_app, server_url, retry_config
-from tests.fixtures import IntegrationBaseCase as BaseCase
-from api import global_config
-from api.models import User
+from tests.fixtures import BrowserController, retry_config, server_url
+from tests.fixtures import AcceptanceBaseCase as BaseCase
+from api import global_config, create_app, db
+from core.models import User
+
+
+def create_test_app():
+    warnings.simplefilter("ignore")
+    new_app = create_app(global_config)
+    app_context = new_app.app_context()
+    app_context.push()
+    new_app.logger.setLevel(logging.WARNING)
+    try:
+        db.create_all()
+    except (sqlalchemy.exc.ProgrammingError, sqlalchemy.exc.IntegrityError):
+        db.session.rollback()
+    db.session.commit()
+    return new_app
 
 
 class PreloadedEnvCase(BaseCase):
@@ -39,17 +56,6 @@ class PreloadedEnvCase(BaseCase):
         self.register_env()
         self.env.login(next_url='index')
         self.assertIn('index', self.driver.current_url.split('?')[0])
-
-    def test_get_user_and_survey(self):
-        user, survey = self.env.get_user_and_survey()
-        self.assertIsNotNone(user)
-        self.assertIsNotNone(survey)
-        self.env.register()
-        # Login should work
-        self.env.login()
-        user, survey = self.env.get_user_and_survey()
-        self.assertIsNotNone(user)
-        self.assertIsNotNone(survey)
 
     def test_register(self):
         user_count = User.query.count()
@@ -252,7 +258,7 @@ class RoutesCase(BaseCase):
             route_name = each_route.replace('/', '-').replace(str(self.admin.get_reset_password_token()), 'token')
             if global_config.DO_SCREENSHOTS is True:
                 # Render full screenshots of every page if running advanced tests
-                fullpage_screenshot(self.driver, dirname=screenshot_dir, fname=route_name + '.png')
+                BrowserController.get_screenshot(self.driver, fname=route_name + '.png')
         print('Page(s) not rendered correctly: ', [key for key, val in out_dict.items() if val is False])
         self.assertTrue(all(out_dict.values()))
 

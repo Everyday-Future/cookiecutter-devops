@@ -1,149 +1,131 @@
 import os
-import random
 import time
-import datetime
-import shutil
-import requests
-import logging
-import warnings
+import random
 import unittest
-import selenium.common.exceptions
-import sqlalchemy.exc
 from selenium import webdriver
 from selenium.webdriver import DesiredCapabilities
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.common.by import By
 from selenium.common.exceptions import ElementNotInteractableException, ElementClickInterceptedException, \
-    WebDriverException
-from config import Config
-from api import db, global_config, create_app, logger
-from api.models import User
-from api.daos.user import UserDAO
+    WebDriverException, NoSuchElementException, TimeoutException, UnexpectedAlertPresentException, \
+    StaleElementReferenceException
+from config import Config, get_logger
+from api import global_config, db
 
 
-run_headless = True
-server_url = global_config.SERVER_URL
-publisher_url = global_config.PUBLISHER_SERVER_URL
-retry_config = dict(exceptions=(selenium.common.exceptions.NoSuchElementException,
-                                selenium.common.exceptions.ElementNotInteractableException,
-                                selenium.common.exceptions.ElementClickInterceptedException,
-                                selenium.common.exceptions.UnexpectedAlertPresentException,
-                                selenium.common.exceptions.TimeoutException,
-                                selenium.common.exceptions.NoAlertPresentException,
-                                AssertionError,
-                                IndexError,
-                                TypeError),
-                    tries=12, delay=0, max_delay=None, backoff=1, jitter=0, logger=logger)
+run_headless = Config.TEST_HEADLESS
+server_url = Config.SERVER_URL
+if server_url.endswith('/'):
+    server_url = server_url[:-1]
+frontend_url = Config.CLIENT_SERVER_URL
+if frontend_url.endswith('/'):
+    frontend_url = frontend_url[:-1]
+logger = get_logger()
+
+# retry allows you to automatically retry tests a few times to ignore some common browser rendering glitches.
+# implement with    @retry(**retry_config)
+retry_config = dict(exceptions=(NoSuchElementException,
+                                ElementNotInteractableException,
+                                ElementClickInterceptedException,
+                                UnexpectedAlertPresentException,
+                                TimeoutException,
+                                StaleElementReferenceException,
+                                WebDriverException,
+                                ValueError, AssertionError, IndexError, TypeError),
+                    tries=3, delay=2.0, max_delay=None, backoff=2, jitter=0, logger=logger)
 
 
-def get_webdriver(is_headless=True, remote_url=None):
+def get_webdriver_chrome(is_headless=True, remote_url=None, disable_cookies=False, disable_javascript=False):
     """
-    Get an instance of the chrome webdriver.
-    :param is_headless:
-    :param remote_url:
-    :return:
+    Get an instance of the selenium chrome webdriver for browser automation and frontend testing.
+
+    Parameters
+    ----------
+    is_headless : Whether to render "headless" without showing a browser window popup
+    remote_url : The URL to navigate to on browser start-up
+    disable_cookies : Whether to disable cookies being stored in the browser
+    disable_javascript : Whether to disable javascript in the browser
+
+    Returns
+    -------
+    Selenium webdriver for browser automation
     """
-    if is_headless is True:
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Runs Chrome in headless mode.
+    chrome_options = ChromeOptions()
+    if is_headless:
+        chrome_options.add_argument("--headless=new")  # Runs in headless mode.
         chrome_options.add_argument('--no-sandbox')  # Bypass OS security model
-        chrome_options.add_argument('--disable-gpu')  # applicable to windows os only
+        chrome_options.add_argument('--disable-gpu')  # Applicable to Windows OS only
         chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument('--lang=en')
         chrome_options.add_argument('--disable-infobars')
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--proxy-server='direct://'")
         chrome_options.add_argument("--proxy-bypass-list=*")
         chrome_options.add_argument("--start-maximized")
         chrome_options.add_argument("--no-default-browser-check")
+        chrome_options.add_argument('--allow-insecure-localhost')
+        chrome_options.add_argument('--allow-running-insecure-content')
+        chrome_options.add_argument('--disable-notifications')
         chrome_options.add_argument("--no-first-run")
+        chrome_options.add_argument("--enable-automation")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-browser-side-navigation")
         chrome_options.add_argument("--ignore-certificate-errors")
+        chrome_options.add_argument('--mute-audio')
+        chrome_options.add_argument('--force-device-scale-factor=1')
+        chrome_options.add_experimental_option(
+            'prefs', {
+                'intl.accept_languages': 'en,en_US',
+                'download.prompt_for_download': False,
+                'download.default_directory': '/dev/null',
+                'automatic_downloads': 2,
+                'download_restrictions': 3,
+                'notifications': 2,
+                'media_stream': 2,
+                'media_stream_mic': 2,
+                'media_stream_camera': 2,
+                'durable_storage': 2,
+            }
+        )
+        if disable_cookies:
+            chrome_options.add_experimental_option("prefs", {"profile.default_content_settings.cookies": 2})
+        if disable_javascript:
+            chrome_options.add_experimental_option("prefs", {'profile.managed_default_content_settings.javascript': 2})
         capabilities = DesiredCapabilities.CHROME.copy()
         capabilities['acceptSslCerts'] = True
         capabilities['acceptInsecureCerts'] = True
+        capabilities['goog:loggingPrefs'] = {'browser': 'ALL'}
+        for key, value in capabilities.items():
+            chrome_options.set_capability(key, value)
         if remote_url not in (None, 'None'):
             print(f'Loading headless remote webdriver at {remote_url}')
-            driver = webdriver.Remote(options=chrome_options,
-                                      desired_capabilities=capabilities,
-                                      command_executor=remote_url)
+            driver = webdriver.Remote(command_executor=remote_url, options=chrome_options)
         else:
             print(f'Loading headless local webdriver')
-            driver = webdriver.Chrome(chrome_options=chrome_options, desired_capabilities=capabilities)
+            driver = webdriver.Chrome(options=chrome_options)
     else:
         print(f'Loading full local webdriver with interface')
-        driver = webdriver.Chrome()
+        driver = webdriver.Chrome(options=chrome_options)
     driver.set_page_load_timeout(90)
+    driver.set_script_timeout(60)
     driver.maximize_window()
     return driver
 
 
-def get_browser_errors(driver):
+def get_webdriver(disable_cookies=False, disable_javascript=False):
     """
-    Checks browser for errors, returns a list of errors
-    :param driver:
-    :return:
+    Simple operation to get an instance of a browser in selenium
+    Parameters
+    ----------
+    :param disable_cookies: Whether to disable cookies being stored in the browser
+    :param disable_javascript: Whether to disable javascript in the browser
+
+    Returns
+    -------
+    Selenium webdriver for browser automation
     """
-    try:
-        browserlogs = driver.get_log('browser')
-    except (ValueError, WebDriverException) as e:
-        # Some browsers does not support getting logs
-        print(f"Could not get browser logs for driver {driver} due to exception: {e}")
-        return []
-    return [entry for entry in browserlogs if entry['level'] == 'SEVERE']
-
-
-def download_file(url, test_filename):
-    """
-    Download a file from a url into the test_gallery
-    :param url: url to download the file from
-    :param test_filename: Name to save the file under. Just a filename, not a full path.
-    :return:
-    """
-    target_file = os.path.join(Config().PROJECT_DIR, global_config.TEST_DIR + f'/{test_filename}')
-    if os.path.exists(target_file):
-        os.remove(target_file)
-    r = requests.get(url, stream=True)
-    if r.status_code == 200:
-        with open(target_file, 'wb') as f:
-            r.raw.decode_content = True
-            shutil.copyfileobj(r.raw, f)
-        return target_file
-
-
-def fullpage_screenshot(driver, dirname, fname, target_width=None, height=None):
-    """
-    Take a screenshot of the full height of a webpage with Selenium
-    :param driver:
-    :param dirname: Name of the directory to save the image in
-    :param fname: Name of the image to be saved
-    :param target_width: Width of the screen. Auto-sizes to bootstrap breakpoints if not specified
-    :param height: Window height. Auto-sizes to full height if not specified.
-    :return:
-    """
-    if fname.lower().endswith('.png'):
-        fname = fname[:-4]
-    if target_width is not None:
-        target_widths = {str(target_width): target_width}
-    else:
-        target_widths = {'xs': 550, 'sm': 750, 'md': 980, 'lg': 1150, 'xl': 1920}
-    for wname, width in target_widths.items():
-        time.sleep(0.3)
-        if height is None:
-            driver.set_window_size(width, 8000)
-            time.sleep(0.3)
-            element = driver.find_element_by_tag_name('body')
-            height = element.size["height"]
-        # Render with height + height of cookie warning
-        driver.set_window_size(width, height + 64.8)
-        time.sleep(0.3)
-        driver.save_screenshot(os.path.join(dirname, f'{wname}--{fname}.png'))
-
-
-def soft_click(element):
-    """A click command that fails silently"""
-    try:
-        element.click()
-    except:
-        pass
+    return get_webdriver_chrome(is_headless=run_headless, remote_url=Config.WEBDRIVER_URL,
+                                disable_cookies=disable_cookies, disable_javascript=disable_javascript)
 
 
 def create_test_app():
@@ -163,210 +145,136 @@ def create_test_app():
 class IntegrationBaseCase(unittest.TestCase):
 
     def setUp(self):
-        """Setup the test driver and create test users"""
+        """Set up the test driver and create test users"""
         global_config.RECAPTCHA_ENABLED = False
         self.app = create_test_app()
-        self.driver = get_webdriver(is_headless=global_config.TEST_HEADLESS and run_headless,
-                                    remote_url=global_config.WEBDRIVER_URL)
+        self.driver = get_webdriver()
         time.sleep(0.5)
         self.driver.get(server_url)
         time.sleep(0.5)
         db.session.flush()
-        self.env = PreloadedEnv(driver=self.driver, server_url=server_url)
-        # Set test variables for un-registered test user
-        self.username = self.env.username
-        self.email = self.env.email
-        self.password = self.env.password
-        # Set test variables for pre-registered test admin
-        self.timestamp = int(time.monotonic_ns())
-        self.admin_username = f"admin{self.timestamp}"
-        self.admin_email = f"admin{self.timestamp}@domain.com"
-        self.admin_password = "notinproduction"
-        # create test admin user
-        self.admin = User(email=self.admin_email)
-        self.admin.set_password(self.admin_password)
-        db.session.add(self.admin)
-        db.session.commit()
+        self.env = BrowserController(driver=self.driver, server_url=server_url)
 
     def tearDown(self):
-        if self.env.user is None:
-            users = [self.admin]
-        else:
-            users = [self.env.user, self.admin]
-        # TODO - Populate with models that depend on User
-        # for obj in (Recipe, Order, Survey, Product, Layout):
-        #     for user in users:
-        #         try:
-        #             objs = obj.query.filter(obj.user == user.id).all()
-        #         except:
-        #             objs = obj.query.filter(obj.user_id == user.id).all()
-        #         [db.session.delete(each_obj) for each_obj in objs]
-        #         db.session.commit()
-        # delete all users after dependencies are cleaned up
-        for user in users:
-            db.session.delete(user)
-        db.session.commit()
         db.session.close()
         db.session.remove()
         db.get_engine(self.app).dispose()
         self.driver.quit()
 
-    def register_env(self):
-        """
-        Associate the information in the PreloadedEnv with the already-registered admin user to skip registration.
-        :return:
-        """
-        self.env.username = self.admin_username
-        self.env.password = self.admin_password
-        self.env.email = self.admin_email
-
 
 class AcceptanceBaseCase(unittest.TestCase):
 
     def setUp(self):
-        """Setup the test driver and create test users"""
+        """Set up the test driver and create test users"""
         global_config.RECAPTCHA_ENABLED = False
-        self.driver = get_webdriver(is_headless=global_config.TEST_HEADLESS and run_headless,
-                                    remote_url=global_config.WEBDRIVER_URL)
+        self.driver = get_webdriver()
         self.driver.set_page_load_timeout(30)
         self.driver.get(server_url)
-        self.env = PreloadedEnv(driver=self.driver, server_url=server_url)
-        # Set test variables for un-registered test user
-        self.username = self.env.username
-        self.email = self.env.email
-        self.password = self.env.password
-        # Set test variables for pre-registered test admin
-        self.admin_timestamp = int(time.time() * 1000)
-        self.admin_username = f"admin{self.admin_timestamp}"
-        self.admin_email = f"admin{self.admin_timestamp}@domain.com"
-        self.admin_password = f"password#{random.randint(0, 99999999)}#"
+        self.env = BrowserController(driver=self.driver, server_url=server_url)
 
     def tearDown(self):
         self.driver.quit()
 
-    def register_env(self):
-        """
-        Associate the information in the PreloadedEnv with the already-registered admin user to skip registration.
-        :return:
-        """
-        self.env.username = self.admin_username
-        self.env.password = self.admin_password
-        self.env.email = self.admin_email
 
-    def register_admin(self):
-        """ Register the admin user and then logout so that login can be tested. """
-        # Register the admin email instead of directly pushing it to the DB.
-        self.env.register(email=self.admin_email, username=self.admin_username, password=self.admin_password)
-        time.sleep(0.2)
-        self.env.logout()
-        time.sleep(0.2)
-
-
-class PreloadedEnv:
+class BrowserController:
     """
-    Create a pre-loaded environment with different test users at different phases of the process.
-    This allows for easy debugging and troubleshooting based on usernames for specific user stories.
-    :return:
+    Wrapper for selenium webdriver for convenient automation of common tasks for this app.
     """
-
-    def __init__(self, driver, server_url=None):
-        self.server_url = server_url or Config().SERVER_URL
-        self.driver = driver
+    def __init__(self, driver=None, server_url=None):
+        self.server_url = server_url or frontend_url
+        self.driver = driver or get_webdriver()
+        self.driver.delete_all_cookies()
         self.timestamp = int(time.monotonic_ns())
         self.username = f"employee{self.timestamp}"
-        self.email = f"misc{self.timestamp}@domain.com"
+        self.email = f"misc{self.timestamp}@luminaryplanners.com"
         self.password = f"password#{random.randint(0, 99999999)}#"
         self.user = None
-        self.customizer_data = {}
-        self.selected_layouts = []
-        self.creative_packs = None
-        self.use_daily = None
-        self.use_prompts = None
-        self.repeat_pattern = None
-        self.external_pathway = None
-        self.internal_pathway = None
         self.short_delay = 0.1
+        self.screenshot_errors = False
 
-    def get_user(self):
-        """ Try to get the currently-referenced user model if possible"""
-        user = self.user
-        if user is None:
-            user = User.query.filter(User.username == self.username).first()
-        if user is None:
-            user = User.query.order_by(User.created.desc()).first()
-        if user is None:
-            return None, None
-        user_dao = UserDAO(current_user=user)
-        return user_dao.get_user()
-
-    def has_browser_error(self):
-        """ Check if the browser has thrown any javascript errors """
-        errors = get_browser_errors(self.driver)
-        if len(errors) > 0:
-            print('browser_errors', errors)
-        return len(errors) > 0
-
-    def click_random_by_class(self, class_name, num_tries=10):
-        for _ in range(num_tries):
-            try:
-                random.choice(self.driver.find_elements_by_class_name(class_name)).click()
-                break
-            except (ElementClickInterceptedException, ElementNotInteractableException):
-                pass
-        time.sleep(0.1)
-
-    def goto_login(self, next_url=None):
-        # Go to the login page
-        if next_url is None:
-            self.driver.get(self.server_url + "/auth/login")
-        else:
-            self.driver.get(self.server_url + f"/auth/login?next={next_url}")
-        time.sleep(0.5)
-
-    def login(self, next_url=None):
-        self.goto_login(next_url=next_url)
-        # Fill in login form
-        if 'login' not in self.driver.current_url:
-            return None
-        self.driver.find_element_by_id("username").send_keys(self.username)
-        self.driver.find_element_by_id("password").send_keys(self.password)
-        self.driver.find_element_by_id("submit_btn").click()
-        time.sleep(0.5)
-
-    def logout(self):
-        self.driver.get(self.server_url + "/auth/logout")
-
-    def goto_register(self, next_url=None):
-        # Go to the register page
-        if next_url is None:
-            self.driver.get(self.server_url + "/auth/register")
-        else:
-            self.driver.get(self.server_url + f"/auth/register?next={next_url}")
-        time.sleep(0.3)
-
-    def fill_register(self, email=None, username=None, password=None):
-        time.sleep(0.5)
-        if 'register' not in self.driver.current_url:
-            return None
-        # Fill in registration form with test variables
-        self.driver.find_element_by_id("email").send_keys(email or self.email)
-        self.driver.find_element_by_id("username").send_keys(username or self.username)
-        self.driver.find_element_by_id("password").send_keys(password or self.password)
-        self.driver.find_element_by_id("password2").send_keys(password or self.password)
-        self.driver.find_element_by_id("privacy").send_keys(" ")
-        self.driver.find_element_by_id("submit_btn").click()
-        time.sleep(1)
-
-    def register(self, next_url=None, email=None, username=None, password=None):
-        self.goto_register(next_url=next_url)
-        self.fill_register(email=email, username=username, password=password)
-
-    def goto_get_started(self):
-        self.driver.get(self.server_url + "/get-started")
-        time.sleep(1)
+    def get(self, url):
+        """
+        Get a url from the target server. Specify target url same as in frontend - /route/more?param=value
+        :param url: Target url to navigate to
+        :type url: str
+        """
+        self.driver.get(self.server_url + url)
+        time.sleep(1.0)
 
     def scroll_to(self, target):
-        self.driver.execute_script(f"window.scrollTo(0, {target});")
+        """ Scroll an item in the main window into view """
+        self.driver.execute_script(f"window.scrollTo(0, '{target}');")
+
+    def scroll_to_px(self, target_px=None):
+        target_px = target_px or 'document.body.scrollHeight'
+        self.driver.execute_script(f"window.scrollTo(0, {target_px})")
+
+    def get_browser_logs(self):
+        """ Get all the console logs from the browser """
+        try:
+            browser_logs = self.driver.get_log('browser')
+        except (ValueError, WebDriverException) as e:
+            # Some browsers does not support getting logs
+            print(f"Could not get browser logs for driver {self.driver} due to exception: {e}")
+            return []
+        return browser_logs
+
+    def get_screenshot(self, fname, target_width=None, height=None):
+        """
+        Take a screenshot of the full height of a webpage with Selenium
+        Parameters
+        ----------
+        fname : Name of the image to be saved
+        target_width : Width of the screen. Auto-sizes to bootstrap breakpoints if not specified
+        height : Window height. Auto-sizes to full height if not specified.
+
+        Returns
+        -------
+
+        """
+        if fname.lower().endswith('.png'):
+            fname = fname[:-4]
+        if target_width is not None:
+            target_widths = {str(target_width): target_width}
+        else:
+            target_widths = {'xs': 550, 'sm': 750, 'md': 980, 'lg': 1150, 'xl': 1920}
+        for wname, width in target_widths.items():
+            time.sleep(0.3)
+            if height is None:
+                self.driver.set_window_size(width, 8000)
+                time.sleep(0.3)
+                element = self.driver.find_element(By.TAG_NAME, 'body')
+                height = element.size["height"]
+            # Render with height + height of cookie warning
+            self.driver.set_window_size(width, height + 64.8)
+            time.sleep(0.3)
+            self.driver.save_screenshot(os.path.join(Config.TEST_GALLERY, f'{wname}--{fname}.png'))
+
+    def find_element_by_id(self, element_id):
+        try:
+            return self.driver.find_element(By.ID, element_id)
+        except:
+            if self.screenshot_errors is True:
+                self.get_screenshot(f'find_element_failed-{time.time()}.png', target_width=1920)
+            raise
+
+    def find_elements_by_class_name(self, element_class):
+        try:
+            return self.driver.find_elements(By.CLASS_NAME, element_class)
+        except:
+            if self.screenshot_errors is True:
+                self.get_screenshot(f'find_element_failed-{time.time()}.png', target_width=1920)
+            raise
+
+    def check_exists_by_id(self, element_id):
+        """
+        Check for an element, return True if it exists, otherwise False.
+        """
+        try:
+            self.find_element_by_id(element_id)
+        except NoSuchElementException:
+            return False
+        return True
 
     def retry_click(self, element_id, num_loops=10, delay=0.5, allow_fail=True):
         """
@@ -374,12 +282,92 @@ class PreloadedEnv:
         """
         for _ in range(num_loops):
             try:
-                self.driver.find_element_by_id(element_id).click()
+                self.find_element_by_id(element_id).click()
                 time.sleep(delay)
                 return True
-            except (selenium.common.exceptions.NoSuchElementException,
-                    selenium.common.exceptions.ElementNotInteractableException):
+            except (NoSuchElementException,
+                    ElementNotInteractableException,
+                    ElementClickInterceptedException):
                 time.sleep(delay)
         if allow_fail is True:
             # Raise the exception if the element still can't be found
-            self.driver.find_element_by_id(element_id).click()
+            self.find_element_by_id(element_id).click()
+
+    def soft_click(self, element_id, allow_fail=False):
+        self.retry_click(element_id, num_loops=1, allow_fail=allow_fail)
+
+    def get_browser_errors(self):
+        """
+        Checks browser for errors, returns a list of errors
+        Returns
+        -------
+        List of log strings that represent browser-side error logs
+        """
+        try:
+            browserlogs = self.get_browser_logs()
+        except (ValueError, WebDriverException) as e:
+            # Some browsers does not support getting logs
+            print(f"Could not get browser logs for driver {self.driver} due to exception: {e}")
+            return []
+        return [entry for entry in browserlogs if entry['level'] == 'SEVERE']
+
+    def has_browser_error(self, exception_keywords=None):
+        """
+        Check if the browser has thrown any javascript errors
+        Parameters
+        ----------
+        exception_keywords : (optional) list of keyword strings to exclude from considering an error
+
+        Returns
+        -------
+        True if there are any browser-side error logs, False if not
+        """
+        if exception_keywords is None:
+            exception_keywords = ['auth0-spa-js', 'googletagmanager']
+        errors = [error for error in self.get_browser_errors()
+                  if not any([kwd in error['message'] for kwd in exception_keywords])]
+        if len(errors) > 0:
+            print('browser_errors', errors)
+        return len(errors) > 0
+
+    def login(self, next_url=None):
+        # Go to the login page
+        if next_url is None:
+            self.driver.get(self.server_url + "/auth/login")
+        else:
+            self.driver.get(self.server_url + f"/auth/login?next={next_url}")
+        time.sleep(0.5)
+        # Fill in login form
+        if 'login' not in self.driver.current_url:
+            return None
+        self.find_element_by_id("login-email").send_keys(self.email)
+        self.find_element_by_id("login-password").send_keys(self.password)
+        time.sleep(0.3)
+        self.find_element_by_id("login-submit").click()
+        time.sleep(1)
+
+    def logout(self, next_url=None):
+        # Go to the register page
+        if next_url is None:
+            self.driver.get(self.server_url + "/auth/logout")
+        else:
+            self.driver.get(self.server_url + f"/auth/logout?next={next_url}")
+        time.sleep(0.5)
+        self.find_element_by_id("logout-submit").click()
+        time.sleep(1)
+
+    def register(self, email=None, password=None, next_url=None):
+        # Go to the register page
+        if next_url is None:
+            self.driver.get(self.server_url + "/auth/login")
+        else:
+            self.driver.get(self.server_url + f"/auth/login?next={next_url}")
+        time.sleep(0.5)
+        self.find_element_by_id('register-toggle').click()
+        time.sleep(0.3)
+        # Fill in registration form with test variables
+        self.find_element_by_id('register-email').send_keys(self.email or email)
+        self.find_element_by_id('register-password').send_keys(self.password or password)
+        self.find_element_by_id('register-confirmPassword').send_keys(self.password or password)
+        self.find_element_by_id('register-submit').click()
+        time.sleep(1)

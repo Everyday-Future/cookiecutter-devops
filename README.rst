@@ -4,7 +4,7 @@ Cookiecutter DevOps
 
 Cookiecutter_ template for a DevOps project
 
-* GitHub repo: https://github.com/Steamboat/cookiecutter-devops
+* GitHub repo: https://github.com/Everyday-Future/cookiecutter-devops
 * Free software: BSD license
 
 Features
@@ -23,15 +23,19 @@ Quickstart
 Ensure that you have python 3.9+ installed and on your system path.
 
 Install the latest Cookiecutter if you haven't installed it yet (this requires
-Cookiecutter 1.4.0 or higher)::
+Cookiecutter 2.0.0 or higher)::
 
-    pip install -U cookiecutter
+# pipx is strongly recommended.
+pipx install cookiecutter
+# If pipx is not an option,
+# you can install cookiecutter in your Python user directory.
+python -m pip install --user cookiecutter
 
 Unpack the repo template::
 
-    cookiecutter https://github.com/Steamboat/cookiecutter-devops.git
+    cookiecutter https://github.com/Everyday-Future/cookiecutter-devops.git
 
-Then:
+THEN DO ALL OF THE FOLLOWING:
 
 * run the ___setup.bat (Windows) or ___setup.sh (Linux/Mac) script, which creates a venv and installs the requirements in it
 * run the CLI interface with .__run_cli.bat (Windows) or .__run_cli.sh (Linux/Mac)
@@ -39,3 +43,4 @@ Then:
 * update the Dockerfile-frontend to reflect the new frontend.
 * if you're using pycharm, move one folder up, right-click on the folder, and select run as pycharm project.
 * Assign the system interpreter for pycharm to the venv instance of python
+* Download a version of chromedriver that matches your current version of Chrome from https://googlechromelabs.github.io/chrome-for-testing/#stable
