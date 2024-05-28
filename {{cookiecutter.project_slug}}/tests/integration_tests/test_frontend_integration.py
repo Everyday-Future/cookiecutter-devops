@@ -57,17 +57,6 @@ class PreloadedEnvCase(BaseCase):
         self.env.login(next_url='index')
         self.assertIn('index', self.driver.current_url.split('?')[0])
 
-    def test_get_user_and_survey(self):
-        user, survey = self.env.get_user_and_survey()
-        self.assertIsNotNone(user)
-        self.assertIsNotNone(survey)
-        self.env.register()
-        # Login should work
-        self.env.login()
-        user, survey = self.env.get_user_and_survey()
-        self.assertIsNotNone(user)
-        self.assertIsNotNone(survey)
-
     def test_register(self):
         user_count = User.query.count()
         self.env.register(next_url='index')

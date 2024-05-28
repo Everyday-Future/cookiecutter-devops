@@ -44,7 +44,10 @@ class RoutesCase(BaseCase):
 
     def setUp(self):
         super(RoutesCase, self).setUp()
-        self.tester = self.app.test_frontend(self)
+        self.app.config.update({
+            "TESTING": True,
+        })
+        self.tester = self.app.test_client()
 
     def test_index(self):
         """Ensure that the route loads correctly"""
