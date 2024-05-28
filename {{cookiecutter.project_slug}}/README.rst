@@ -37,7 +37,7 @@ Git can be downloaded here - https://git-scm.com/downloads
 Once you get git all set up, use it to clone this repo so that you can work with it locally.
 
 Docker is the easy way to use this codebase, but you can also operate it within your native environment by creating
-a new environment and installing the requirements in requirements.txt
+a new environment and installing the requirements in requirements-core.txt (and requirements-api.txt to run the api)
 
 
 Required Programs For Local Administration
@@ -119,7 +119,7 @@ Project Organization
     |   |   |-- auth.py      <- authentication infrastructure
     |   |
     |   |-- __init__.py      <- Flask initialization and configuration
-    |   |-- requirements.txt <- Dependencies specifically for the model server
+    |   |-- requirements.txt <- Dependencies specifically for the model server. May be appended with special extensions
     |
     |-- host                 <- Scripts and markdown for hosting within cloud services
     |   |-- test-all.sh      <- Script for automatically running all tests and stopping at failure

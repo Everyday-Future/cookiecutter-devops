@@ -8,15 +8,15 @@ ENV PYTHONUNBUFFERED 1
 ENV SERVER_MODE base
 WORKDIR /srv
 # Get core requirements
-COPY core/requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+COPY requirements-core.txt .
+RUN pip install --upgrade pip && pip install -r requirements-core.txt
 
 
 # api - flask backend api
 FROM base AS api
 # Get api requirements
-COPY api/requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+COPY requirements-api.txt .
+RUN pip install --upgrade pip && pip install -r requirements-api.txt
 # Get api files
 COPY core core
 COPY api api

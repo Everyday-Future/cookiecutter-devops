@@ -1,8 +1,10 @@
 *.py[cod]
 venv/
+.venv/
 *.egg-info/
 dist/
 settings.cfg
+app.db
 *.log*
 *__pycache__
 *.~lock*
@@ -17,9 +19,6 @@ chromedriver.exe
 geckodriver.exe
 geckodriver.log
 msedgedriver.exe
-slides_creds.json
-token_compressor_sa.json
-frontend_secrets.json
 
 # exclude everything in temp except the folder itself.
 data/*.json
@@ -31,6 +30,17 @@ data/test_gallery/*/*.*
 !data/test_gallery/.gitkeep
 !data/test_assets
 data/*.pdf
+
+
+# frontend
+/frontend/coverage
+frontend/node_modules
+frontend/build
+frontend/.svelte-kit
+frontend/package
+frontend/.env
+frontend/docker.env
+
 
 docs/build
 .DS_Store
@@ -104,8 +114,6 @@ nosetests.xml
 .project
 .pydevproject
 
-venv
-app.db
 # Installer logs
 pip-delete-this-directory.txt
 
@@ -144,15 +152,3 @@ target/
 # misc
 *.pem
 
-
-# testing
-/frontend/coverage
-# debug
-frontend/node_modules
-frontend/build
-frontend/.svelte-kit
-frontend/package
-frontend/.env
-frontend/docker.env
-frontend/vite.config.js.timestamp-*
-frontend/vite.config.ts.timestamp-*

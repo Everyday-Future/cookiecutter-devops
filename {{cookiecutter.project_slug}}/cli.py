@@ -65,9 +65,13 @@ class SubProcessor:
         # Build and test all
         SubProcessor.docker_down()
         click.clear()
+        SubProcessor.env_docker()
         SubProcessor.docker_build(force_rm=True)
-        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
-                        'run -e TEST_PARALLEL=True host bash host/test_all.sh', shell=True)
+        subprocess.call('docker compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+                        'run host python -m pytest tests/unit_tests ', shell=True)
+        subprocess.call('docker compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+                        'run -e TEST_PARALLEL=True host python -m pytest tests/integration_tests ',
+                        shell=True)
 
     @staticmethod
     def wait_for_server_up(target_url, max_timeout=300):
@@ -314,8 +318,8 @@ def run_tests(mode):
     elif mode == '2':
         # Integration Tests
         sp.docker_down()
-        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
-                        'run -e TEST_PARALLEL=True host unittest-parallel --jobs 4 -s tests.integration_tests -vvv ',
+        subprocess.call('docker compose -f docker-compose.yaml -f docker-compose.integration.yaml '
+                        'run -e TEST_PARALLEL=True host python -m pytest tests/integration_tests ',
                         shell=True)
     elif mode == '3':
         # Local Acceptance Tests
@@ -340,9 +344,7 @@ def run_tests(mode):
         sp.docker_down()
         subprocess.call('docker-compose -f docker-compose.locust.yaml up --scale worker=4', shell=True)
     elif mode == '8':
-        # Test all without building
-        subprocess.call('docker-compose -f docker-compose.yaml -f docker-compose.integration.yaml '
-                        'run -e TEST_PARALLEL=True host bash host/test_all.sh', shell=True)
+        sp.test_all()
     elif mode == 'x':
         run_specific_tests()
 

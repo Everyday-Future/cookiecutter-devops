@@ -19,22 +19,23 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath('../../..'))
 sys.path.insert(0, os.path.abspath('./core/'))
 sys.path.insert(0, os.path.abspath('./api/'))
 sys.setrecursionlimit(1500)
 
-import {{ cookiecutter.project_slug }}
+import core
+import api
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
 # the built documents.
 #
 # The short X.Y version.
-version = {{ cookiecutter.project_slug }}.__version__
+version = '0.1.0'
 # The full version, including alpha/beta/rc tags.
-release = {{ cookiecutter.project_slug }}.__version__
+release = '0.1.0'
 
 # -- General configuration ---------------------------------------------
 
