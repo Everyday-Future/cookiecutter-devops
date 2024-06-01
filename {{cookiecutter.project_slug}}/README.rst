@@ -323,8 +323,8 @@ If a .sh script won't run in windows, open a gitforwindows or MINGW shell and up
 
 
 ```bash
-    git update-index --chmod=+x <file>
-    dos2unix <file>
+    git update-index --chmod=+x boot.sh
+    dos2unix boot.sh
 ```
 
 Credits

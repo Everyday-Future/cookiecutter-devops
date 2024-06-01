@@ -92,7 +92,7 @@ def get_webdriver_chrome(is_headless=True, remote_url=None, disable_cookies=Fals
         if disable_javascript:
             chrome_options.add_experimental_option("prefs", {'profile.managed_default_content_settings.javascript': 2})
         capabilities = DesiredCapabilities.CHROME.copy()
-        capabilities['acceptSslCerts'] = True
+        # capabilities['acceptSslCerts'] = True
         capabilities['acceptInsecureCerts'] = True
         capabilities['goog:loggingPrefs'] = {'browser': 'ALL'}
         for key, value in capabilities.items():

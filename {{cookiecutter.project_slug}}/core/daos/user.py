@@ -1,6 +1,6 @@
 
 from api import db
-from api.models import User, Address, BannedToken, BaseDAO
+from core.models import User, Address, BannedToken, BaseDAO
 
 
 class UserDAO(BaseDAO):
