@@ -321,11 +321,9 @@ Troubleshooting
 
 If a .sh script won't run in windows, open a gitforwindows or MINGW shell and update it with:
 
+git update-index --chmod=+x boot.sh
+dos2unix boot.sh
 
-```bash
-    git update-index --chmod=+x boot.sh
-    dos2unix boot.sh
-```
 
 Credits
 -------
