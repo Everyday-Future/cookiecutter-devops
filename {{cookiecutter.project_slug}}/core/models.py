@@ -19,12 +19,12 @@ import random
 import base64
 import jwt
 from datetime import datetime, timedelta
-from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm.attributes import flag_modified
-from config import Config
-from api import db
 from sqlalchemy.schema import DropTable
 from sqlalchemy.ext.compiler import compiles
+from werkzeug.security import generate_password_hash, check_password_hash
+from config import Config
+from api import sa_db as db
 
 
 @compiles(DropTable, "postgresql")
@@ -189,7 +189,7 @@ class BannedToken(DataMixin, db.Model):
     Token Model for storing JWT tokens
     """
     plural = 'banned_tokens'
-    token = db.Column(db.String(500), unique=True, nullable=False)
+    jti = db.Column(db.String(36), nullable=False)
 
     def __repr__(self):
         return f'<BannedToken id: token: {self.token}'
@@ -198,11 +198,11 @@ class BannedToken(DataMixin, db.Model):
         return {'token': self.token}
 
     @staticmethod
-    def create_new(token):
-        if isinstance(token, bytes):
-            token = token.decode('utf-8')
+    def create_new(jti):
+        if isinstance(jti, bytes):
+            jti = jti.decode('utf-8')
         # noinspection PyArgumentList
-        b_token = BannedToken(token=token)
+        b_token = BannedToken(jti=jti)
         db.session.add(b_token)
         db.session.commit()
         return b_token
@@ -230,19 +230,24 @@ class User(DataMixin, db.Model):
     # Foreign key cols
     addresses = db.relationship('Address', backref=db.backref("user_addrs", cascade="all"), lazy='dynamic')
     # Top-level fields
+    username = db.Column(db.String(512), index=True, nullable=True)
+    role = db.Column(db.String(64), index=True, nullable=False, default='user')  # or publisher or admin
     email = db.Column(db.String(512), index=True)
     token = db.Column(db.String(512), index=True)
     token_expiration = db.Column(db.DateTime)
-    password_hash = db.Column(db.String(512))
+    password_hash = db.Column(db.String(512), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     privacy = db.Column(db.Boolean)
 
     def __repr__(self):
-        return f'<User id:{self.id} created: {self.created} updated: {self.updated} is_anon: {self.is_anon}>'
+        return (f'<User id:{self.id} created: {self.created} updated: {self.updated} is_anon: {self.is_anon} '
+                f'role: {self.role} username: {self.username} email: {self.email}>')
 
     def to_dict(self):
         return {
             "id": self.token,
+            "username": self.username,
+            "role": self.role,
             "email": self.email,
             "is_admin": self.is_admin,
             "privacy": self.privacy,
@@ -256,9 +261,13 @@ class User(DataMixin, db.Model):
         }
 
     @staticmethod
-    def create_new(email=None, privacy=None, is_admin=False, data=None):
+    def create_new(username, role, password_hash=None, password=None,
+                   email=None, privacy=None, is_admin=False, data=None):
+        if password_hash is None and password is not None:
+            password_hash = generate_password_hash(password)
         # noinspection PyArgumentList
-        new_user = User(email=email, privacy=privacy, is_admin=is_admin)
+        new_user = User(username=username, role=role, password_hash=password_hash,
+                        email=email, privacy=privacy, is_admin=is_admin)
         data = data or {}
         new_user.update_data(data)
         db.session.add(new_user)

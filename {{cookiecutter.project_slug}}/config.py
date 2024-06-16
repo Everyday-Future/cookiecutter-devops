@@ -6,17 +6,20 @@ App configuration for Flask.
 Can also be accessed as global_config outside the Flask context.
 
 """
-
 import re
 import json
 import os
 import datetime
 import logging
 from dotenv import load_dotenv
+import logging.handlers
+from queue import Queue
+from time import time
 
 
 __author__ = """{{ cookiecutter.full_name.replace('\"', '\\\"') }}"""
 __email__ = '{{ cookiecutter.email }}'
+_PROJECT_NAME = '{{ cookiecutter.project_slug }}'
 # noinspection SpellCheckingInspection
 base_key = 'tohmgs4dsfdsgsdfghsvaefev3587tyb63876bh84drtbubet'  # Simple key to be overridden in production
 
@@ -33,22 +36,6 @@ def parse_env_boolean(env_var):
         return False
     if env_var in (1, '1', 'true', 'True', True):
         return True
-
-
-def get_logger_handler():
-    log_handler = logging.StreamHandler()
-    # create logging formatter
-    formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s')
-    log_handler.setFormatter(formatter)
-    log_handler.setLevel(os.environ.get('LOG_LEVEL', 'DEBUG'))
-    return log_handler
-
-
-def get_logger():
-    logger = logging.getLogger('main')
-    logger.addHandler(get_logger_handler())
-    logger.setLevel(os.environ.get('LOG_LEVEL', 'DEBUG'))
-    return logger
 
 
 class Version:
@@ -146,19 +133,23 @@ class Version:
 
 
 class Config(object):
+    # Load dotenv credentials if specified and available
+    if os.path.isfile('.env'):
+        load_dotenv('.env')
+    # System configs
+    PROJECT_NAME = _PROJECT_NAME
+    LOG_LEVEL = os.environ.get("LOG_LEVEL", "DEBUG")
     DATE_STR_FORMAT = "%Y_%m_%d-%H_%M_%S"
     DATE_STR_PRINT = "%A %B %d, %Y"
     VERSION = Version().version
     ENV = os.environ.get("ENV", "testing")
-    SERVER_MODE = os.environ.get("SERVER_MODE")
+    # Configured by container for logging clarity (api, host, locust, ...)
+    SERVER_MODE = os.environ.get("SERVER_MODE", "debug")
     # Default to most secure configuration
     DEBUG_MODE = ENV not in ('staging', 'production')
     DEBUG = parse_env_boolean(os.environ.get('DEBUG')) or DEBUG_MODE
     TESTING = parse_env_boolean(os.environ.get('TESTING')) or DEBUG_MODE
     DEVELOPMENT = parse_env_boolean(os.environ.get('DEVELOPMENT')) or DEBUG_MODE
-    # Load dotenv credentials if specified and available
-    if os.path.isfile('.env'):
-        load_dotenv('.env')
     # Project organization
     PROJECT_DIR = os.path.dirname(__file__)
     DATA_DIR = os.environ.get('DATA_DIR', os.path.join(PROJECT_DIR, 'data'))
@@ -222,7 +213,16 @@ class Config(object):
     # Database connections set up for Postgresql
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or "postgresql://postgres:docker@db:5432"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    DATA_LAKEHOUSE_NAME = os.environ.get('DATA_LAKEHOUSE_NAME')
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True
+    }
+    # Auth credentials
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+    JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(minutes=15)
+    JWT_REFRESH_TOKEN_EXPIRES = datetime.timedelta(days=30)
+    SWAGGER = {'title': 'My API', 'uiversion': 3}
+    CACHE_TYPE = 'redis'
+    CACHE_REDIS_URL = 'redis://localhost:6379/0'
     # Google cloud configs
     PROJECT_ID = os.environ.get('PROJECT_ID')
     SECRET_ID = os.environ.get('SECRET_ID')
@@ -231,10 +231,70 @@ class Config(object):
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
     S3_REGION = os.environ.get("S3_REGION") or "us-east-2"
-    S3_BUCKET = os.environ.get("S3_BUCKET") or "luhadev"
-    GCP_PRODUCT_ID = os.environ.get("GCP_PRODUCT_ID")
-    GCP_CREDS_FILE = os.environ.get("GCP_BUCKET") or './data/creds/luminary-production-327f7da7bb2a.json'
+    S3_BUCKET = os.environ.get("S3_BUCKET") or "develop"
+    DATA_LAKEHOUSE_NAME = os.environ.get('DATA_LAKEHOUSE_NAME')
     # Alerting resources
     SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
     SLACK_TOKEN = os.environ.get('SLACK_TOKEN')
     SLACK_CHANNEL = os.environ.get('SLACK_CHANNEL') or '#engineering'
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        log_record = {
+            'timestamp': self.formatTime(record, self.datefmt),
+            'level': record.levelname,
+            'message': record.getMessage(),
+            'user_id': getattr(record, 'user_id', 'unknown'),
+            'request_id': getattr(record, 'request_id', 'unknown'),
+            'module': record.module,
+            'funcName': record.funcName,
+            'lineno': record.lineno,
+            'performance': getattr(record, 'performance', None)
+        }
+        return json.dumps(log_record)
+
+
+def _get_logger_handler_file():
+    log_handler = logging.handlers.RotatingFileHandler('app.log', maxBytes=1000000, backupCount=3)
+    formatter = JsonFormatter()
+    log_handler.setFormatter(formatter)
+    log_handler.setLevel(os.environ.get('LOG_LEVEL', 'DEBUG'))
+    return log_handler
+
+
+def _get_logger_handler_stream():
+    log_handler = logging.StreamHandler()
+    # create logging formatter
+    formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s')
+    log_handler.setFormatter(formatter)
+    log_handler.setLevel(os.environ.get('LOG_LEVEL', 'DEBUG'))
+    return log_handler
+
+
+def _get_logger():
+    new_logger = logging.getLogger('backend')
+    new_logger.setLevel(os.environ.get('LOG_LEVEL', 'DEBUG'))
+    new_logger.addHandler(_get_logger_handler_file())
+    new_logger.addHandler(_get_logger_handler_stream())
+    return new_logger
+
+
+# global logging and threading instances
+logger = _get_logger()
+log_queue = Queue(-1)
+queue_handler = logging.handlers.QueueHandler(log_queue)
+queue_listener_file = logging.handlers.QueueListener(log_queue, _get_logger_handler_file())
+queue_listener_stream = logging.handlers.QueueListener(log_queue, _get_logger_handler_stream())
+queue_listener_file.start()
+queue_listener_stream.start()
+
+
+def log_performance(func):
+    def wrapper(*args, **kwargs):
+        start_time = time()
+        result = func(*args, **kwargs)
+        duration = time() - start_time
+        logger.info('Performance', extra={'performance': duration})
+        return result
+    return wrapper
