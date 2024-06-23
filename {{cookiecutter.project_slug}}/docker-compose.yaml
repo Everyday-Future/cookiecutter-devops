@@ -16,9 +16,31 @@ services:
       retries: 10
     restart: unless-stopped
     ports:
-      - "5433:5432"
+      - "5436:5432"
     networks:
       - default
+
+  redis-stack:
+    image: "redis/redis-stack-server:latest"
+# # Custom local redis configuration options
+#    volumes:
+#       - ./config/redis.conf:/usr/local/etc/redis/redis.conf
+#     command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 16G
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # The flask backend API
   api:

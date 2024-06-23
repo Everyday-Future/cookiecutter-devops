@@ -1,9 +1,9 @@
-from api import db
-from core.models import Address, BaseDAO
+
+from core.models import db, Address
 from core.daos.user import UserDAO
 
 
-class AddressDAO(BaseDAO):
+class AddressDAO:
     """
     operations against the address table
     """

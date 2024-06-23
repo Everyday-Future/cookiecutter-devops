@@ -1,9 +1,7 @@
-
-from api import db
-from core.models import User, Address, BannedToken, BaseDAO
+from core.models import db, User, Address, BannedToken
 
 
-class UserDAO(BaseDAO):
+class UserDAO:
     """
     operations against the users table
     """

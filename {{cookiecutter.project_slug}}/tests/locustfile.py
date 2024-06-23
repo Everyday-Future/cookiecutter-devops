@@ -9,7 +9,7 @@ artificial users to look at the performance impact of different behaviors.
 import time
 import random
 from locust import HttpUser, task, between
-from api import global_config
+from config import Config
 from fixtures import BrowserController, get_webdriver
 
 
@@ -18,9 +18,9 @@ class QuickstartUser(HttpUser):
     driver = None
 
     def on_start(self):
-        self.driver = get_webdriver(is_headless=True, remote_url=global_config.WEBDRIVER_URL)
+        self.driver = get_webdriver()
         time.sleep(0.5)
-        self.driver.get(global_config.SERVER_URL)
+        self.driver.get(Config.SERVER_URL)
         time.sleep(0.5)
 
     @task(10)
@@ -28,7 +28,7 @@ class QuickstartUser(HttpUser):
         """
         User customizes a book and gets the pdf printable
         """
-        env = BrowserController(driver=self.driver, server_url=global_config.SERVER_URL)
+        env = BrowserController(driver=self.driver, server_url=Config.SERVER_URL)
         self.driver.get(env.server_url + "/index")
         time.sleep(random.random())
         env.scroll_to(2000)
