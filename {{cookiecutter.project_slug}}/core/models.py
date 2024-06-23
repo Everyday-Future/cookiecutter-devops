@@ -12,12 +12,10 @@ but doesn't do a commit operation.
 
 """
 
-
 import os
 import time
 import random
 import base64
-import jwt
 from datetime import datetime, timedelta
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import DropTable
@@ -30,9 +28,6 @@ from api import sa_db as db
 @compiles(DropTable, "postgresql")
 def _compile_drop_table(element, compiler, **kwargs):
     return compiler.visit_drop_table(element) + " CASCADE"
-
-
-global_config = Config()
 
 
 def models_to_dict(models):
@@ -55,7 +50,7 @@ class DataMixin(object):
     slug = db.Column(db.String(64), index=True)
     created = db.Column(db.DateTime, index=True, nullable=False, default=datetime.utcnow)
     updated = db.Column(db.DateTime, onupdate=datetime.utcnow, nullable=False, default=datetime.utcnow)
-    data = db.Column(db.JSON, nullable=True, default={'version': global_config.VERSION, 'data': {}})
+    data = db.Column(db.JSON, nullable=True, default={'version': Config.VERSION, 'data': {}})
 
     def bump_updated(self):
         """ Indicate a table update by setting the 'updated' time to now """
@@ -81,7 +76,7 @@ class DataMixin(object):
         :return: self.data['data'] dict
         """
         if self.data is None:
-            self.data = {'start_time': time.time(), 'is_complete': False, "version": global_config.VERSION}
+            self.data = {'start_time': time.time(), 'is_complete': False, "version": Config.VERSION}
             flag_modified(self, "data")
         if key_name is None:
             return self.data
@@ -111,77 +106,6 @@ class DataMixin(object):
     def to_dict(self):
         # Returns a dictionary with all attributes of the object that are not methods or dunders
         return {k: v for k, v in self.__dict__.items() if not k.startswith("__") and not callable(v)}
-
-
-class Mailinglist(DataMixin, db.Model):
-    """
-    User entries in the mailing list form.
-    """
-    plural = 'mailinglists'
-    __table_args__ = {'extend_existing': True}
-    # Top-level fields
-    name = db.Column(db.String(128), default='', nullable=False)
-    email = db.Column(db.String(128), nullable=False)
-    subscribed = db.Column(db.Boolean, default=True)
-    message = db.Column(db.Text, nullable=False)
-
-    def __repr__(self):
-        return f'<Mailinglist id={self.id} email={self.email} name={self.name} subscribed={self.subscribed}>'
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            "created": self.created.timestamp(),
-            "updated": self.updated.timestamp(),
-            'name': self.name,
-            'email': self.email,
-            'subscribed': self.subscribed,
-            'message': self.message
-        }
-
-    @staticmethod
-    def create_new(name, email, message, subscribed=True):
-        # noinspection PyArgumentList
-        new_subscriber = Mailinglist(name=name, email=email, subscribed=subscribed, message=message)
-        db.session.add(new_subscriber)
-        db.session.commit()
-        return new_subscriber
-
-
-class Contact(DataMixin, db.Model):
-    """
-    User entries in the contact us form or feedback surveys.
-    """
-    plural = 'contacts'
-    __table_args__ = {'extend_existing': True}
-    # Top-level fields
-    name = db.Column(db.String(128), nullable=False)
-    email = db.Column(db.String(128), nullable=False)
-    message = db.Column(db.Text, nullable=False)
-
-    def __repr__(self):
-        return f'<Contact id={self.id} email={self.email} name={self.name}>'
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "created": self.created.timestamp(),
-            "updated": self.updated.timestamp(),
-            "name": self.name,
-            "email": self.email,
-            "message": self.message
-        }
-
-    @staticmethod
-    def create_new(name, email, message, data=None):
-        data = data or {}
-        data.update(dict(name=name, email=email, message=message))
-        # noinspection PyArgumentList
-        new_contact = Contact(name=name, email=email, message=message)
-        new_contact.update_data(data)
-        db.session.add(new_contact)
-        db.session.commit()
-        return new_contact
 
 
 class BannedToken(DataMixin, db.Model):
@@ -273,14 +197,13 @@ class User(DataMixin, db.Model):
         db.session.add(new_user)
         new_user.get_token()
         db.session.commit()
-        new_user.set_jwt()
         return new_user
 
     def absorb_user(self, target_user):
         # TODO - assign a user's products + cart_ids + orders over to a registered instance
         pass
 
-    def get_token(self, expires_in=3600*4):
+    def get_token(self, expires_in=3600 * 4):
         now = datetime.utcnow()
         if self.token and self.token_expiration is not None and self.token_expiration > now + timedelta(seconds=60):
             return self.token
@@ -299,53 +222,6 @@ class User(DataMixin, db.Model):
         if user is None or user.token_expiration is None or user.token_expiration < datetime.utcnow():
             return None
         return user
-
-    def set_jwt(self, expires_in_days=60.0):
-        """
-        Encode a table id as a JWT with the id as {"table_id": 0} where table_id for User == user_id
-        :param expires_in_days: Number of hours for which the token is valid as a float.
-        """
-        prev_token = self.token
-        # expires_in_seconds = expires_in_days * 60 * 60 * 24
-        token = jwt.encode({'sub': str(self.id),
-                            'iat': time.time(),
-                            'exp': datetime.utcnow() + timedelta(days=expires_in_days),
-                            'jti': base64.b64encode(os.urandom(24)).decode('utf-8')},
-                           global_config.UID_SECRET_KEY, algorithm='HS256')
-        self.token = token
-        db.session.commit()
-        if prev_token is not None:
-            BannedToken.create_new(prev_token)
-        return token
-
-    @staticmethod
-    def get_decoded_id(encoded_jwt):
-        """
-        Validates the auth token
-        :param encoded_jwt:
-        :return: integer|string
-        """
-        if isinstance(encoded_jwt, str):
-            encoded_jwt = encoded_jwt.encode()
-        try:
-            payload = jwt.decode(encoded_jwt, global_config.UID_SECRET_KEY, algorithms=['HS256'])
-            is_blacklisted_token = BannedToken.check_banned(encoded_jwt)
-            if is_blacklisted_token:
-                raise ValueError('Token blacklisted. Please log in again.')
-            else:
-                return int(payload['sub'])
-        except jwt.ExpiredSignatureError:
-            # Ban the expired token
-            BannedToken.create_new(encoded_jwt)
-            raise ValueError('Signature expired. Please log in again.')
-        except jwt.InvalidTokenError as err:
-            raise ValueError(f'Invalid token: {err} Please log in again.')
-
-    @staticmethod
-    def from_jwt(encoded_jwt: str):
-        """ get a database row from a jwt. """
-        # noinspection PyUnresolvedReferences
-        return User.query.get(User.get_decoded_id(encoded_jwt))
 
     @property
     def is_anon(self):
@@ -428,9 +304,206 @@ class Address(DataMixin, db.Model):
         return f"{self.first_name} {self.last_name}"
 
 
+class Event(DataMixin, db.Model):
+    """
+    Event within an experiment.
+
+    This is a sequential log of records for experiments to track data over time and allow rebuilding
+    of the main experiment in the event of data corruption.
+    """
+    plural = 'events'
+    __table_args__ = {'extend_existing': True}
+    # Foreign key cols
+    user_id = db.Column(db.BigInteger, db.ForeignKey('user.id'), nullable=False, index=True)
+    # Name of the referenced experiment
+    name = db.Column(db.String(64), index=True)
+    # Choice represented in this event. So this represents which MAB arm was pulled.
+    choice_key = db.Column(db.String(256))
+    # Some experiments are broken into subsets of users, which can be specified here.
+    subset_key = db.Column(db.String(256), index=True, default='default')
+    # Value of the pull and reward for the event
+    pull_event = db.Column(db.Boolean, default=True, nullable=False)
+    reward_event = db.Column(db.Boolean, default=False, nullable=False)
+    bonus_event = db.Column(db.Boolean, default=False, nullable=False)
+
+    def __repr__(self):
+        return f"<Event: id={self.id} name={self.name} created={self.created} choice_key={self.choice_key} " \
+               f"subset_key={self.subset_key} pull_event={self.pull_event} reward_event={self.reward_event} >"
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            "created": self.created.timestamp(),
+            "updated": self.updated.timestamp(),
+            "name": self.name,
+            "choice_key": self.choice_key,
+            "subset_key": self.subset_key,
+            "pull_event": self.pull_event,
+            "reward_event": self.reward_event,
+        }
+        return data
+
+    @staticmethod
+    def create_new(user_id: int, name: str, choice_key: str, subset_key: str):
+        """
+        Create a new record of an event as part of an experiment
+        :param user_id: The user that triggered the event
+        :param name: Name of the referenced experiment
+        :param choice_key: Choice represented in this event. So this represents which MAB arm was pulled.
+        :param subset_key: Some experiments are broken into subsets of users, which can be specified here.
+        :return:
+        """
+        # noinspection PyArgumentList
+        new_event = Event(user_id=user_id, name=name, choice_key=choice_key, subset_key=subset_key or 'default')
+        db.session.add(new_event)
+        db.session.commit()
+        return new_event
+
+    @staticmethod
+    def get_by_user_and_experiment(user: User, experiment_name):
+        """
+        Get an event for a user and an experiment.
+        Typically used to find out what choice was made on the pull to create a reward.
+        :param user:
+        :type user:
+        :param experiment_name:
+        :type experiment_name:
+        :return:
+        :rtype:
+        """
+        return Event.query.filter_by(user_id=user.id).filter_by(name=experiment_name).first()
+
+    @classmethod
+    def get_all_events_for_experiment(cls, experiment_name, subset_key=None):
+        """
+        Search through all events for an experiment, filtered by subset if specified.
+        :param experiment_name:
+        :type experiment_name:
+        :param subset_key:
+        :type subset_key:
+        :return:
+        :rtype:
+        """
+        if subset_key is not None:
+            return cls.query.filter_by(name=experiment_name).filter_by(subset_key=subset_key).all()
+        else:
+            return cls.query.filter_by(name=experiment_name).all()
+
+    @classmethod
+    def get_scores(cls, experiment_name, choices: list[str], subset_key=None):
+        """
+        Total up the pulls and rewards for the events in the specified choices list
+        and, if specified, filtered to the designated subset.
+        :param experiment_name:
+        :type experiment_name:
+        :param choices:
+        :type choices:
+        :param subset_key:
+        :type subset_key:
+        :return:
+        :rtype:
+        """
+        events = cls.get_all_events_for_experiment(experiment_name=experiment_name, subset_key=subset_key)
+        # Start with 1 pull 1 reward to aggressively try out new additions to the choices
+        out_dict = {choice: {'pulls': 1, 'rewards': 1, 'bonus': 1} for choice in choices}
+        for each_event in events:
+            # If the choice is still active, add the pull and reward to the choice subtotal
+            if each_event.choice_key in choices:
+                out_dict[each_event.choice_key]['pulls'] += 1
+                if each_event.reward_event is True:
+                    out_dict[each_event.choice_key]['rewards'] += 1
+                if each_event.bonus_event is True:
+                    out_dict[each_event.choice_key]['bonus'] += 1
+        return out_dict
+
+    @classmethod
+    def reward_recent(cls, user: User, thresh_min=180.0, is_bonus=False):
+        """
+        Reward all the Events for the specified user for the last n minutes
+        This allows for a long-term memory for the app,
+        where bandit pulls are rewarded for the most important conversions
+        rather that superficial landing page click-through numbers.
+        This is represented by the bonus_event column added in the latest migration.
+        :param thresh_min:
+        :type thresh_min:
+        :return:
+        :rtype:
+        """
+        events = Event.query.filter_by(user_id=user.id).all()
+        events = [event for event in events
+                  if datetime.utcnow() <= (event.updated + timedelta(seconds=thresh_min * 60.0))]
+        for event in events:
+            if is_bonus is True:
+                event.bonus_event = True
+            else:
+                event.reward_event = True
+        db.session.commit()
+
+
+class Experiment(DataMixin, db.Model):
+    """
+    Model for an Experiment.
+
+    This is a records table, where if an experiment is updated a new instance is created so that the history
+    of the table is preserved.
+
+    data structure should follow:
+
+    {
+        "name": string
+        "version": string
+        "choices": list[string]
+    }
+    """
+    plural = 'experiments'
+    __tablename__ = 'experiment'
+    __table_args__ = {'extend_existing': True}
+    # Name of the experiment
+    name = db.Column(db.String(64), index=True)
+
+    def __repr__(self):
+        return f"<Experiment: id={self.id} name={self.name} created={self.created} >"
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            "created": self.created.timestamp(),
+            "updated": self.updated.timestamp(),
+            "name": self.name
+        }
+        return {**self.get_data(), **data}
+
+    @staticmethod
+    def create_new(experiment_name, choices: list[str]):
+        # noinspection PyArgumentList
+        new_model = Experiment(name=experiment_name,
+                               updated=datetime.utcnow())
+        new_model.update_data({'choices': choices})
+        db.session.add(new_model)
+        db.session.commit()
+        return new_model
+
+    @property
+    def choices(self):
+        """ Get the selection of choices for the experiment from the data column. """
+        return self.data.get('choices', [])
+
+    def choices_list_is_updated(self, new_choices):
+        """ Compare a new list of choices to the currently-available choices. """
+        return set(self.choices) != set(new_choices)
+
+    @classmethod
+    def get_by_name(cls, name):
+        """
+        Get the Experiment by name or return None if not found.
+        If multiple records are found, get the latest
+        """
+        return Experiment.query.filter_by(name=name).order_by(cls.updated.desc()).first()
+
+
 def get_all_tables():
     """ Get all the table models for testing and introspection """
-    return [Mailinglist, Contact, BannedToken, User, Address]
+    return [BannedToken, User, Address]
 
 
 def get_all_table_demos(debug_mode=False):
@@ -440,26 +513,11 @@ def get_all_table_demos(debug_mode=False):
     user = User.create_new(email=email_address)
     user.set_password(password)
     addr = Address.create_new(user_id=user.id, first_name="Steven", last_name="Sutton",
-                              street1="898 East Summit Dr", street2="Unit 33",
+                              street1="895 East Summit Dr", street2="Unit 893",
                               city="Dalton", state="GA", post_code="30102", country_code="US",
                               phone_number="404-429-7444", organization="Everyday Future")
-    contact = Contact.create_new(name=username, email=email_address, message="test contact form entry " * 50)
-    mailinglist = Mailinglist.create_new(name=username, email=email_address, subscribed=True,
-                                         message="test contact form entry " * 50)
     return {
         'user': user,
         'banned_token': BannedToken.create_new(username),
-        'address': addr,
-        'contact': contact,
-        'mailinglist': mailinglist
+        'address': addr
     }
-
-
-class BaseDAO:
-    """
-    Shared functions for all Data Access Objects
-    """
-    def get_data(self):
-        """ Get the data from the instance of a row represented in a db.Model class"""
-        if hasattr(self, 'row'):
-            return self.row.get_data()

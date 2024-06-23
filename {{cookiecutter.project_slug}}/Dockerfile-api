@@ -7,19 +7,38 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV SERVER_MODE base
 WORKDIR /srv
+## Get add-apt-repository
+#RUN apt update && apt install -y software-properties-common
+## Install all other OS packages
+#RUN apt install -y \
+#    iputils-ping \
+#    poppler-utils \
+#    software-properties-common \
+#    libwebp-dev \
+#    libjpeg62-turbo-dev \
+#    libpng-dev libxpm-dev \
+#    libfreetype6-dev \
+#    gcc \
+#    gnupg2
+## Cairo for ReportLab
+#RUN apt install -y libcairo2-dev libjpeg8-dev libpng-dev
+## Inkscape for editing and rendering
+#RUN add-apt-repository ppa:inkscape.dev/stable && apt install -y inkscape
 # Get requirements
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
+# code base
+COPY core core
+COPY migrations migrations
+COPY config.py .
+COPY config.json .
+ENV SERVER_MODE core
 
 
 # api - flask backend api
 FROM base AS api
 # Get api files
-COPY core core
 COPY api api
-COPY migrations migrations
-COPY config.py .
-COPY config.json .
 COPY backend.py .
 COPY boot.sh .
 ENV FLASK_APP backend.py

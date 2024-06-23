@@ -5,8 +5,8 @@ A universal factory for different database types
 """
 
 from config import Config
-from api.adapters.database.baseclass import Database
-from api.adapters.database.postgres import DatabasePostgres
+from core.adapters.database.baseclass import Database
+from core.adapters.database.postgres import DatabasePostgres
 
 
 def get_database(database_type='postgres', **kwargs):

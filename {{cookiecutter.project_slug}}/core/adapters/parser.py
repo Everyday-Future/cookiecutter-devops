@@ -5,9 +5,10 @@ Parser
 String parser for interpreting model answers, articles, scraped pages, and more
 
 """
+import re
 import json
 from json import JSONDecodeError
-import re
+from jinja2 import Environment, BaseLoader, StrictUndefined
 
 
 class StringParser:
@@ -191,3 +192,77 @@ class StringParser:
         """
         answers_list = [self.classify_answer(ans, class_names=class_names, **kwargs) for ans in answers_list]
         return len(list(set(answers_list))) == 1
+
+    @staticmethod
+    def extract_urls(text):
+        """
+        Extract all URLs from a string.
+        :param text: Input text containing URLs
+        :type text: str
+        :return: List of URLs found in the text
+        :rtype: list
+        """
+        url_pattern = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+        return url_pattern.findall(text)
+
+    @staticmethod
+    def convert_to_camel_case(snake_str):
+        """
+        Convert a snake_case_string to a camelCaseString.
+        :param snake_str: Input string in snake_case
+        :type snake_str: str
+        :return: String converted to camelCase
+        :rtype: str
+        """
+        components = snake_str.split('_')
+        return components[0] + ''.join(x.title() for x in components[1:])
+
+    @staticmethod
+    def extract_dates(text):
+        """
+        Extract all date formats from a string.
+        :param text: Input text containing dates
+        :type text: str
+        :return: List of dates found in the text
+        :rtype: list
+        """
+        date_pattern = re.compile(r'(\d{4}-\d{2}-\d{2}|\d{2}/\d{2}/\d{4}|\d{2}-\d{2}-\d{4})')
+        return date_pattern.findall(text)
+
+    @staticmethod
+    def convert_newlines_to_br(text):
+        """
+        Convert newline characters to HTML <br> tags.
+        :param text: Input text with newline characters
+        :type text: str
+        :return: Text with newline characters replaced by <br> tags
+        :rtype: str
+        """
+        return text.replace('\n', '<br>')
+
+    @staticmethod
+    def remove_special_characters(text):
+        """
+        Remove all special characters from a string.
+        :param text: Input text with special characters
+        :type text: str
+        :return: Text with special characters removed
+        :rtype: str
+        """
+        return re.sub(r'[^A-Za-z0-9\s]', '', text)
+
+
+def edit_string(in_text, story: dict):
+    """
+    Simple wrapper for editing a string with Jinja2 templating
+    :param in_text: The string that will be edited
+    :param story: The dictionary of content to replace, sometimes including {"story": Story()}
+    :return:
+    """
+    # Try to catch all parsing issues in unit and integration testing.
+    # but use less strict parsing in production
+    template = Environment(loader=BaseLoader(), trim_blocks=True, lstrip_blocks=True,
+                           undefined=StrictUndefined).from_string(in_text)
+    if not isinstance(story, dict):
+        story = {"story": story}
+    return template.render(**story)

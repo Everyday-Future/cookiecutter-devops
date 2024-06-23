@@ -1,13 +1,11 @@
 from flask import current_app
-from core.models import global_config, get_all_table_demos
-from api import global_config, ip_ban
-from api.v1_routes import bp
 from flask import request, jsonify
-from flask_jwt_extended import (
-    jwt_required, get_jwt_identity, get_jwt, create_access_token, create_refresh_token
-)
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, create_access_token, create_refresh_token
 from werkzeug.security import generate_password_hash, check_password_hash
-from core.models import db, User, BannedToken
+from config import Config
+from core.models import db, User, BannedToken, get_all_table_demos
+from api import ip_ban
+from api.v1_routes import bp
 from api.auth import role_required
 from api.daos.schemas import UserSchema
 
@@ -61,7 +59,7 @@ def ping():
     Update stats about page load times for the user
     :return:
     """
-    return {'version': global_config.VERSION, 'success': True, **global_config.SERVER_DICT}
+    return {'version': Config.VERSION, 'success': True, **Config.SERVER_DICT}
 
 
 @bp.route('/raise-exception', methods=['GET'])

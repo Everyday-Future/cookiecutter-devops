@@ -3,16 +3,12 @@ import datetime
 import unittest
 from unittest.mock import patch, MagicMock
 from config import Config
-from api import global_config, create_app
-from config import _get_logger_handler_file, _get_logger_handler_stream, _get_logger
-
-
-def test_init():
-    assert type(Config()) == type(global_config)
+from api import create_app
+from config import _get_logger_handler_file, _get_logger
 
 
 def test_env():
-    assert global_config.VERSION is not None
+    assert Config.VERSION is not None
 
 
 def test_logging():

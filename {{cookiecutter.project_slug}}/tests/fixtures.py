@@ -2,6 +2,9 @@ import os
 import time
 import random
 import unittest
+import logging
+import warnings
+import sqlalchemy
 from selenium import webdriver
 from selenium.webdriver import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -9,8 +12,9 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import ElementNotInteractableException, ElementClickInterceptedException, \
     WebDriverException, NoSuchElementException, TimeoutException, UnexpectedAlertPresentException, \
     StaleElementReferenceException
-from config import Config, get_logger
-from api import global_config, db
+from config import Config, logger
+from core.models import db
+from api import create_app
 
 
 run_headless = Config.TEST_HEADLESS
@@ -20,7 +24,6 @@ if server_url.endswith('/'):
 frontend_url = Config.CLIENT_SERVER_URL
 if frontend_url.endswith('/'):
     frontend_url = frontend_url[:-1]
-logger = get_logger()
 
 # retry allows you to automatically retry tests a few times to ignore some common browser rendering glitches.
 # implement with    @retry(**retry_config)
@@ -130,7 +133,7 @@ def get_webdriver(disable_cookies=False, disable_javascript=False):
 
 def create_test_app():
     warnings.simplefilter("ignore")
-    new_app = create_app(global_config)
+    new_app = create_app(Config)
     app_context = new_app.app_context()
     app_context.push()
     new_app.logger.setLevel(logging.WARNING)
@@ -146,7 +149,7 @@ class IntegrationBaseCase(unittest.TestCase):
 
     def setUp(self):
         """Set up the test driver and create test users"""
-        global_config.RECAPTCHA_ENABLED = False
+        Config.RECAPTCHA_ENABLED = False
         self.app = create_test_app()
         self.driver = get_webdriver()
         time.sleep(0.5)
@@ -166,7 +169,7 @@ class AcceptanceBaseCase(unittest.TestCase):
 
     def setUp(self):
         """Set up the test driver and create test users"""
-        global_config.RECAPTCHA_ENABLED = False
+        Config.RECAPTCHA_ENABLED = False
         self.driver = get_webdriver()
         self.driver.set_page_load_timeout(30)
         self.driver.get(server_url)
@@ -248,7 +251,7 @@ class BrowserController:
             # Render with height + height of cookie warning
             self.driver.set_window_size(width, height + 64.8)
             time.sleep(0.3)
-            self.driver.save_screenshot(os.path.join(Config.TEST_GALLERY, f'{wname}--{fname}.png'))
+            self.driver.save_screenshot(os.path.join(Config.TEST_GALLERY_DIR, f'{wname}--{fname}.png'))
 
     def find_element_by_id(self, element_id):
         try:

@@ -2,13 +2,13 @@
 
 Config
 
-App configuration for Flask.
-Can also be accessed as global_config outside the Flask context.
+App configuration for core/api
 
 """
 import re
-import json
 import os
+import json
+import uuid
 import datetime
 import logging
 from dotenv import load_dotenv
@@ -47,15 +47,15 @@ class Version:
 
     @staticmethod
     def get_version():
-        with open('config.json', 'r') as fp:
+        with open(os.path.join(os.path.dirname(__file__), 'config.json'), 'r') as fp:
             return json.load(fp=fp)['version']
 
     def set_version(self, new_version):
         self.version = new_version
-        with open('config.json', 'r') as fp:
+        with open(os.path.join(os.path.dirname(__file__), 'config.json'), 'r') as fp:
             cfg = json.load(fp=fp)
         cfg['version'] = new_version
-        with open('config.json', 'w') as fp:
+        with open(os.path.join(os.path.dirname(__file__), 'config.json'), 'w') as fp:
             json.dump(cfg, fp=fp)
 
     @staticmethod
@@ -138,6 +138,7 @@ class Config(object):
         load_dotenv('.env')
     # System configs
     PROJECT_NAME = _PROJECT_NAME
+    EMAIL_ADDRESS = os.environ.get('EMAIL_ADDRESS', __email__)
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "DEBUG")
     DATE_STR_FORMAT = "%Y_%m_%d-%H_%M_%S"
     DATE_STR_PRINT = "%A %B %d, %Y"
@@ -154,10 +155,24 @@ class Config(object):
     PROJECT_DIR = os.path.dirname(__file__)
     DATA_DIR = os.environ.get('DATA_DIR', os.path.join(PROJECT_DIR, 'data'))
     TEMP_DIR = os.environ.get('TEMP_DIR') or os.path.join(DATA_DIR, 'temp')
-    TEST_GALLERY = os.environ.get('TEST_GALLERY') or os.path.join(DATA_DIR, 'test_gallery')
+    TEST_ASSETS_DIR = os.environ.get('TEST_ASSETS_DIR') or os.path.join(DATA_DIR, 'test_assets')
+    TEST_GALLERY_DIR = os.environ.get('TEST_GALLERY_DIR') or os.path.join(DATA_DIR, 'test_gallery')
+    SCREENSHOT_DIR = os.environ.get('SCREENSHOT_DIR') or TEST_GALLERY_DIR
+    RAW_DATA_DIR = os.environ.get('RAW_DATA_DIR') or os.path.join(DATA_DIR, 'raw')
+    CREDS_DIR = os.environ.get('CREDS_DIR') or os.path.join(DATA_DIR, 'creds')
+    INKSCAPE_DIR = os.environ.get('INKSCAPE_DIR', "inkscape.exe")
     if not os.path.isdir(TEMP_DIR):
         os.makedirs(TEMP_DIR)
+    if not os.path.isdir(RAW_DATA_DIR):
+        os.makedirs(RAW_DATA_DIR)
     TEST_PARALLEL = parse_env_boolean(os.environ.get('TEST_PARALLEL', False))
+    # Generate a random UUID for this service/daemon
+    INSTANCE_ID = str(uuid.uuid4())
+    INSTANCE_WORKER = os.environ.get('INSTANCE_WORKER', '').lower()
+    INSTANCE_TYPE = os.environ.get('INSTANCE_TYPE', 'cli').lower().replace(' ', '_')
+    if INSTANCE_TYPE == '':
+        raise ValueError("INSTANCE_TYPE must be specified for every instance of a swarm service")
+    INSTANCE_START = time()
     # host and port are set prioritized by specificity. More specific variables overwrite more general ones.
     HOST = os.environ.get('HOST') or "0.0.0.0"  # Only used in Config
     PORT = os.environ.get('PORT') or "5000"
@@ -199,6 +214,7 @@ class Config(object):
     DO_SCREENSHOTS = parse_env_boolean(os.environ.get('DO_SCREENSHOTS', False))
     TEST_HEADLESS = parse_env_boolean(os.environ.get('TEST_HEADLESS', True))
     WEBDRIVER_URL = os.environ.get('WEBDRIVER_URL', None)
+    TARGET_BROWSER = os.environ.get('TARGET_BROWSER', 'chrome')
     # Secrets
     SECRET_KEY = os.environ.get('SECRET_KEY') or base_key
     UID_SECRET_KEY = os.environ.get('UID_SECRET_KEY') or base_key
@@ -211,11 +227,14 @@ class Config(object):
     # Logging configuration
     LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT') or True
     # Database connections set up for Postgresql
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or "postgresql://postgres:docker@db:5432"
+    DEFAULT_DB = os.environ.get('DEFAULT_DB', 'postgres')
+    SQLALCHEMY_DATABASE_URI = (os.environ.get('DATABASE_URL', os.environ.get('SQLALCHEMY_DATABASE_URI'))
+                               or "postgresql://postgres:docker@db:5432")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True
     }
+    BLOCK_WRITE_DB = os.environ.get('BLOCK_WRITE_DB', True)  # Force core.adapters.database to read-only, but not api
     # Auth credentials
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
     JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(minutes=15)
@@ -223,8 +242,14 @@ class Config(object):
     SWAGGER = {'title': 'My API', 'uiversion': 3}
     CACHE_TYPE = 'redis'
     CACHE_REDIS_URL = 'redis://localhost:6379/0'
+    # Machine learning params
+    MODEL_DIR = os.path.join(DATA_DIR, 'models')
+    WORD2VEC_MODEL = os.environ.get('WORD2VEC_MODEL', 'glove-wiki-gigaword-300')
+    SIMILARITY_MODEL = os.environ.get('SIMILARITY_MODEL', os.path.join(MODEL_DIR, WORD2VEC_MODEL))
+    PCA_DIMS = int(os.environ.get('PCA_DIMS', '30'))
+    PCA_MODEL = os.environ.get('PCA_MODEL', os.path.join(MODEL_DIR, f'pca_{PROJECT_NAME}_{PCA_DIMS}d.joblib'))
     # Google cloud configs
-    PROJECT_ID = os.environ.get('PROJECT_ID')
+    CLOUD_PROJECT_ID = os.environ.get('PROJECT_ID', 'project_id')
     SECRET_ID = os.environ.get('SECRET_ID')
     SECRET_VERSION = os.environ.get('SECRET_VERSION', 'latest')
     # Storage resources
@@ -232,11 +257,52 @@ class Config(object):
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
     S3_REGION = os.environ.get("S3_REGION") or "us-east-2"
     S3_BUCKET = os.environ.get("S3_BUCKET") or "develop"
-    DATA_LAKEHOUSE_NAME = os.environ.get('DATA_LAKEHOUSE_NAME')
+    DATA_LAKEHOUSE_NAME = os.environ.get('DATA_LAKEHOUSE_NAME', 'lakehouse')
+    # Redis Stack memorystore / pubsub
+    REDIS_HOST = os.environ.get('REDIS_HOST', "redis-stack")
+    REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
     # Alerting resources
     SLACK_CLIENT_ID = os.environ.get('SLACK_CLIENT_ID')
     SLACK_TOKEN = os.environ.get('SLACK_TOKEN')
     SLACK_CHANNEL = os.environ.get('SLACK_CHANNEL') or '#engineering'
+    # Search sources
+    SERPAPI_API_KEY = os.environ.get('SERPAPI_API_KEY')
+    SEMANTIC_SCHOLAR_API_KEY = os.environ.get('SEMANTIC_SCHOLAR_API_KEY')
+    FACT_CHECK_API_KEY = os.environ.get('FACT_CHECK_API_KEY')
+    CORE_PAPERS_API_KEY = os.environ.get('CORE_PAPERS_API_KEY')
+    # Social sources
+    REDDIT_CLIENT_ID = os.environ.get('REDDIT_CLIENT_ID')
+    REDDIT_CLIENT_SECRET = os.environ.get('REDDIT_CLIENT_SECRET')
+    REDDIT_USER_AGENT = os.environ.get('REDDIT_USER_AGENT')
+    # News data sources
+    MEDIASTACK_API_KEY = os.environ.get('MEDIASTACK_API_KEY')
+    MEDIASTACK_API_LIMIT = os.environ.get('MEDIASTACK_API_LIMIT', 100)
+    THENEWSAPI_API_KEY = os.environ.get('THENEWSAPI_API_KEY')
+    THENEWSAPI_API_LIMIT = os.environ.get('THENEWSAPI_API_LIMIT', 100)
+    NEWSAPI_ORG_API_KEY = os.environ.get('NEWSAPI_ORG_API_KEY')
+    NEWSAPI_ORG_API_LIMIT = os.environ.get('NEWSAPI_ORG_API_LIMIT', 3)
+    PROPUBLICA_API_KEY = os.environ.get('PROPUBLICA_API_KEY')
+    NEWSDATA_API_KEY = os.environ.get('NEWSDATA_API_KEY')
+    NEWSDATA_API_ENDPOINT = os.environ.get('NEWSDATA_API_ENDPOINT', 'https://newsdata.io/api/1/news')
+    NEWSDATA_API_LIMIT = os.environ.get('NEWSDATA_API_LIMIT', 3)
+    ARTICLEXTRACTOR_API_KEY = os.environ.get('ARTICLEXTRACTOR_API_KEY')
+    # Finance data sources
+    FRED_API_KEY = os.environ.get('FRED_API_KEY')
+    POLYGON_API_KEY = os.environ.get('POLYGON_API_KEY')
+    POLYGON_API_DEBUG = parse_env_boolean(os.environ.get('POLYGON_API_DEBUG', False))
+    ALPHA_VANTAGE_API_KEY = os.environ.get('ALPHA_VANTAGE_API_KEY')
+    # LLM Inference
+    OPENAI_ORGANIZATION = os.environ.get('OPENAI_ORGANIZATION')
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+    OPENAI_BASE_MODEL = os.environ.get('OPENAI_BASE_MODEL') or 'gpt-3.5-turbo'
+    OPENAI_EXPERT_MODEL = os.environ.get('OPENAI_EXPERT_MODEL') or 'gpt-4-turbo-preview'
+    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
+    LOCAL_OLLAMA_URL = os.environ.get('LOCAL_OLLAMA_URL')  # http://localhost:11434 usually
+    LOCAL_OLLAMA_IS_ACTIVE = parse_env_boolean(os.environ.get('LOCAL_OLLAMA_IS_ACTIVE', False))
+    RUNPOD_API_KEY = os.environ.get('RUNPOD_API_KEY')
+    ANYSCALE_API_KEY = os.environ.get('ANYSCALE_API_KEY')
+    ANYSCALE_BASE_URL = os.environ.get('ANYSCALE_BASE_URL')
+    DEFAULT_LLM_AGENT = os.environ.get('DEFAULT_LLM_AGENT', 'local')
 
 
 class JsonFormatter(logging.Formatter):

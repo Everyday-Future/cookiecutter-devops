@@ -179,6 +179,16 @@ of chrome. Just download and add to the top level of your project directory.
 
 You'll find chromedriver downloads here - https://chromedriver.chromium.org/downloads
 
+
+Testing in pycharm
+------------------
+
+Here is the easiest way to get tests going in Pycharm -
+
+Unit Tests
+1
+
+
 Deployment Strategy
 ===================
 

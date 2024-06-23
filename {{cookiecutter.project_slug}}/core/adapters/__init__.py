@@ -6,7 +6,7 @@ Alert - Send alerts over slack, zapier, email, and/or logging.
 Email - Send emails by modifying templates with params
 Storage - Upload and download blobs from cloud storage
 
-Each represent abstract access to whatever services are specified in the global_config.
+Each represent abstract access to whatever services are specified in the Config.
 Therefore, the adapter system is flexible, dynamic, and configurable.
 
 While we did attempt to simplify dependencies by only loading the services specified by using importlib,

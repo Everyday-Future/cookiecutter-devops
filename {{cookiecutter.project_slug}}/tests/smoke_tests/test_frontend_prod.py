@@ -16,7 +16,7 @@ import requests
 from retry import retry
 from tests.fixtures import BrowserController, retry_config, server_url
 from tests.fixtures import AcceptanceBaseCase as BaseCase
-from api import global_config
+from config import Config
 
 
 class PreloadedEnvCase(BaseCase):
@@ -49,7 +49,7 @@ class RoutesCase(BaseCase):
         Ensure that errors are raised and handled properly.
         :return:
         """
-        screenshot_dir = global_config.SCREENSHOT_DIR
+        screenshot_dir = Config.SCREENSHOT_DIR
         # Ensure that nonexistent pages can be detected
         self.driver.get(server_url + "/nonexistent")
         assert self.driver.page_source.contains("Page not found")
@@ -64,7 +64,7 @@ class RoutesCase(BaseCase):
         :param routes_list:
         :return:
         """
-        screenshot_dir = global_config.SCREENSHOT_DIR
+        screenshot_dir = Config.SCREENSHOT_DIR
         if not os.path.exists(screenshot_dir):
             os.makedirs(screenshot_dir, exist_ok=True)
         out_dict = {}
@@ -75,7 +75,7 @@ class RoutesCase(BaseCase):
             out_dict[each_route] = "Page not found" not in source and "An unexpected error has occurred." not \
                                    in source and "Privacy Policy" in source
             route_name = each_route.replace('/', '-')
-            if global_config.DO_SCREENSHOTS is True:
+            if Config.DO_SCREENSHOTS is True:
                 # Render full screenshots of every page if running advanced tests
                 BrowserController.get_screenshot(self.driver, fname=route_name + '.png')
         print('Page(s) not rendered correctly: ', [key for key, val in out_dict.items() if val is False])

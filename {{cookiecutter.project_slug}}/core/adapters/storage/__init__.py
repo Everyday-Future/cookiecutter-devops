@@ -9,8 +9,8 @@ Specify type_name as 'aws' or 'gcp' to create a new storage instance.
 """
 import os.path
 
-from api.adapters.storage.storage_gcp import GcpStorage
-from api.adapters.storage.storage_aws import AwsStorage
+from core.adapters.storage.storage_gcp import GcpStorage
+from core.adapters.storage.storage_aws import AwsStorage
 
 
 class Storage:
@@ -18,7 +18,7 @@ class Storage:
     Abstraction of storage layers to simplify exposing CDN resources to the rest of the app
     """
     def __init__(self, type_name='gcp'):
-        # Load storage adapter type with credentials supplied by global_config
+        # Load storage adapter type with credentials supplied by Config
         if type_name == 'aws':
             self.storage = AwsStorage()
         elif type_name == 'gcp':
