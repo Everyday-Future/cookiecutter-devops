@@ -180,14 +180,24 @@ of chrome. Just download and add to the top level of your project directory.
 You'll find chromedriver downloads here - https://chromedriver.chromium.org/downloads
 
 
-Testing in pycharm
+Testing in PyCharm
 ------------------
 
 Here is the easiest way to get tests going in Pycharm -
 
 Unit Tests
-1
+1 - create a new test pytest configuration and call it "unit tests"
+2 - select "script" mode and point it towards tests/unit_tests
+3 - set the working directory to the project folder
+4 - set the environment variables to: DATABASE_URL=postgresql://postgres:docker@localhost:5436;REDIS_HOST=localhost;BASIC_TESTS=True
 
+Integration Tests
+1 - create a new test pytest configuration and call it "integration tests"
+2 - select "script" mode and point it towards tests/integration_tests
+3 - add the pytest flag of --cache-clear
+4 - set the working directory to the project folder
+5 - set the environment variables to: BASIC_TESTS=True;DATABASE_URL=postgresql://postgres:docker@localhost:5436;REDIS_HOST=localhost;SERVER_URL=http://localhost:5000
+6 - get a chromedriver.exe file for selenium from https://googlechromelabs.github.io/chrome-for-testing/
 
 Deployment Strategy
 ===================
